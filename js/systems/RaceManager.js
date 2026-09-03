@@ -43,7 +43,10 @@ export class RaceManager {
     const count = CONFIG.RACE.BOT_COUNT;
     const names = [...CONFIG.RACE.BOT_NAMES].sort(() => Math.random() - 0.5).slice(0, count);
     for (let i = 0; i < count; i++) {
-      const speedMultiplier = 1 + randRange(-CONFIG.RACE.BOT_SPEED_VARIANCE, CONFIG.RACE.BOT_SPEED_VARIANCE);
+      const speedMultiplier =
+        1 +
+        CONFIG.RACE.BOT_BASE_SPEED_BONUS +
+        randRange(-CONFIG.RACE.BOT_SPEED_VARIANCE, CONFIG.RACE.BOT_SPEED_VARIANCE);
       const startLane = i % lanePositions.length;
       const bot = new Bot(
         i + 1,
@@ -68,6 +71,10 @@ export class RaceManager {
       // Bots don't react instantly/perfectly — small chance they just eat the
       // hit, so the AI feels alive rather than robotic-perfect.
       if (Math.random() < 0.82) bot.tryDodge(blockedLanes);
+      // Still in a blocked lane after the dodge attempt = hit an obstacle.
+      if (blockedLanes.has(bot.laneIndex)) {
+        bot.applyHitSlowdown(CONFIG.RACE.BOT_HIT_SLOWDOWN_MS, CONFIG.RACE.BOT_HIT_SLOWDOWN_FACTOR);
+      }
     }
   }
 
@@ -80,7 +87,7 @@ export class RaceManager {
       const diff = bot.progress - playerProgress;
       const normalizedDiff = Math.max(-0.3, Math.min(0.3, diff / CONFIG.RACE.DISTANCE_PX));
       const rubberBand = 1 - normalizedDiff * CONFIG.RACE.BOT_RUBBER_BAND_STRENGTH;
-      const effectiveMultiplier = bot.speedMultiplier * rubberBand;
+      const effectiveMultiplier = bot.speedMultiplier * rubberBand * bot.slowFactor;
       const progressDelta = playerSpeed * effectiveMultiplier * deltaSec;
 
       bot.update(deltaMs, progressDelta);
