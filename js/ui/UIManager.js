@@ -110,7 +110,12 @@ export class UIManager {
 
       touchControls: document.getElementById('touch-controls'),
       btnLeft: document.getElementById('btn-left'),
-      btnRight: document.getElementById('btn-right')
+      btnRight: document.getElementById('btn-right'),
+
+      modeCarousel: document.getElementById('mode-carousel'),
+      modeCarouselDots: document.getElementById('mode-carousel-dots'),
+      btnModePrev: document.getElementById('btn-mode-prev'),
+      btnModeNext: document.getElementById('btn-mode-next')
     };
 
     this._screens = [
@@ -133,6 +138,54 @@ export class UIManager {
 
     this.el.btnShopTabBoats.addEventListener('click', () => this._setShopTab('boats'));
     this.el.btnShopTabObstacles.addEventListener('click', () => this._setShopTab('obstacles'));
+
+    this._initModeCarousel();
+  }
+
+  /** Sets up the 2-per-page swipeable mode-select carousel (dots + arrow nav). */
+  _initModeCarousel() {
+    const carousel = this.el.modeCarousel;
+    const dotsWrap = this.el.modeCarouselDots;
+    if (!carousel || !dotsWrap) return;
+
+    const pages = carousel.querySelectorAll('.mode-page');
+    dotsWrap.innerHTML = '';
+    pages.forEach((_, i) => {
+      const dot = document.createElement('span');
+      dot.className = i === 0 ? 'mode-dot mode-dot--active' : 'mode-dot';
+      dotsWrap.appendChild(dot);
+    });
+
+    const updateDots = () => {
+      const pageWidth = carousel.clientWidth;
+      if (!pageWidth) return;
+      const index = Math.round(carousel.scrollLeft / pageWidth);
+      [...dotsWrap.children].forEach((dot, i) =>
+        dot.classList.toggle('mode-dot--active', i === index)
+      );
+    };
+
+    carousel.addEventListener(
+      'scroll',
+      () => {
+        clearTimeout(this._modeScrollDebounce);
+        this._modeScrollDebounce = setTimeout(updateDots, 60);
+      },
+      { passive: true }
+    );
+
+    this.el.btnModePrev.addEventListener('click', () => {
+      carousel.scrollBy({ left: -carousel.clientWidth, behavior: 'smooth' });
+    });
+    this.el.btnModeNext.addEventListener('click', () => {
+      carousel.scrollBy({ left: carousel.clientWidth, behavior: 'smooth' });
+    });
+
+    // Always start on the first page when the mode-select screen is opened.
+    this._resetModeCarousel = () => {
+      carousel.scrollLeft = 0;
+      updateDots();
+    };
   }
 
   _hideAllScreens() {
@@ -153,6 +206,7 @@ export class UIManager {
       case States.MODE_SELECT:
         this._hideAllScreens();
         this.el.modeSelect.classList.add('visible');
+        if (this._resetModeCarousel) this._resetModeCarousel();
         break;
       case States.LEVEL_SELECT:
         this._hideAllScreens();
