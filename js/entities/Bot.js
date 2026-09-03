@@ -27,6 +27,8 @@ export class Bot {
     this.finished = false;
     this.finishOrder = null;
     this._dodgeCooldownMs = 0;
+    this._slowMsRemaining = 0;
+    this._slowFactor = 1;
   }
 
   setLanePositions(lanePositions) {
@@ -50,10 +52,22 @@ export class Bot {
     this._dodgeCooldownMs = 400;
   }
 
+  /** Called when the bot fails to dodge a blocked lane — temporary speed penalty. */
+  applyHitSlowdown(durationMs, factor) {
+    this._slowMsRemaining = durationMs;
+    this._slowFactor = factor;
+  }
+
+  /** Current speed multiplier from an active hit-slowdown (1 = no penalty). */
+  get slowFactor() {
+    return this._slowMsRemaining > 0 ? this._slowFactor : 1;
+  }
+
   update(deltaMs, progressDeltaPx) {
     this.progress += progressDeltaPx;
 
     if (this._dodgeCooldownMs > 0) this._dodgeCooldownMs = Math.max(0, this._dodgeCooldownMs - deltaMs);
+    if (this._slowMsRemaining > 0) this._slowMsRemaining = Math.max(0, this._slowMsRemaining - deltaMs);
 
     if (this._moveElapsed < this._moveDuration) {
       this._moveElapsed = Math.min(this._moveElapsed + deltaMs, this._moveDuration);
