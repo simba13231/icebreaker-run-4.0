@@ -75,6 +75,14 @@ export class InputManager {
   }
 
   _onTouchStart(e) {
+    // Only treat this as a swipe gesture if it started outside any
+    // scrollable menu/shop panel (e.g. on the game canvas itself).
+    // Otherwise scrolling those panels on mobile gets blocked below.
+    if (e.target.closest('.panel--scrollable, .shop-tabs')) {
+      this._touchStartX = null;
+      this._touchStartY = null;
+      return;
+    }
     const t = e.touches[0];
     this._touchStartX = t.clientX;
     this._touchStartY = t.clientY;
