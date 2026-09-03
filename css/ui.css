@@ -263,23 +263,89 @@
 
 /* --- Mode select --- */
 
-.mode-grid {
+.mode-carousel-wrap {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: 6px;
   width: 100%;
+}
+
+.mode-carousel {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.mode-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.mode-page {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.mode-nav-arrow {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 3px 0 rgba(6, 60, 100, 0.15);
+  font-size: 1.3rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ocean-deep);
+  transition: transform var(--transition-fast);
+}
+
+.mode-nav-arrow:active {
+  transform: translateY(2px);
+}
+
+.mode-carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.mode-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(6, 60, 100, 0.25);
+  transition: width var(--transition-fast), background var(--transition-fast);
+}
+
+.mode-dot--active {
+  width: 18px;
+  background: var(--color-ocean-mid);
 }
 
 .mode-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 26px 20px;
+  gap: 6px;
+  padding: 18px 10px;
   border-radius: var(--radius-md);
   background: linear-gradient(160deg, #eafcff, #d3f1ff);
   box-shadow: inset 0 0 0 2px var(--panel-border), 0 6px 0 rgba(0, 0, 0, 0.05);
   transition: transform var(--transition-fast);
+  text-align: center;
+  min-width: 0;
 }
 
 .mode-card:hover {
@@ -291,21 +357,21 @@
 }
 
 .mode-card-icon {
-  font-size: 2.4rem;
+  font-size: 1.9rem;
 }
 
 .mode-card-title {
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--color-ocean-deep);
 }
 
 .mode-card-desc {
-  font-size: 0.85rem;
+  font-size: 0.68rem;
+  line-height: 1.3;
   color: var(--color-text-secondary);
   font-weight: 700;
-  max-width: 320px;
 }
 
 /* --- Level select grid --- */
@@ -920,11 +986,14 @@
   right: 0;
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   z-index: 6;
   pointer-events: none;
-  flex-wrap: wrap;
-  padding: 0 16px;
+  touch-action: none;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  max-height: 32px;
+  padding: 0 12px;
 }
 
 .powerup-pill {
@@ -940,6 +1009,22 @@
   box-shadow: 0 4px 10px rgba(4, 30, 54, 0.2);
   color: var(--color-ocean-deep);
   animation: badgePulse 1.4s ease-in-out infinite;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.powerup-pill span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 380px) {
+  .powerup-pill {
+    font-size: 0.68rem;
+    padding: 4px 8px;
+    gap: 3px;
+  }
 }
 
 /* --- Race countdown --- */
