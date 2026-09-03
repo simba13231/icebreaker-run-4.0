@@ -104,8 +104,11 @@ export const CONFIG = {
   RACE: {
     DISTANCE_PX: 11000,
     BOT_COUNT: 3,
+    BOT_BASE_SPEED_BONUS: 0.1, // bots are 10% faster than the player by default
     BOT_SPEED_VARIANCE: 0.16,
     BOT_RUBBER_BAND_STRENGTH: 0.18,
+    BOT_HIT_SLOWDOWN_MS: 700, // how long a bot is slowed after failing to dodge a hazard
+    BOT_HIT_SLOWDOWN_FACTOR: 0.4, // speed multiplier while slowed
     COUNTDOWN_SECONDS: 3,
     COLLISION_PENALTY_MS: 900,
     COLLISION_PENALTY_SPEED_FACTOR: 0.35,
