@@ -277,25 +277,56 @@ export class Renderer {
     ctx.translate(hazard.x, hazard.y);
     ctx.rotate((hazard.rotation * Math.PI) / 180);
 
-    ctx.beginPath();
-    ctx.roundRect(-w / 2, -h / 2, w, h, h * 0.45);
-    const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
-    grad.addColorStop(0, '#A9764A');
-    grad.addColorStop(1, '#6E4A2A');
-    ctx.fillStyle = grad;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(60, 38, 18, 0.6)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    const bodyPath = new Path2D();
+    bodyPath.roundRect(-w / 2, -h / 2, w, h, h * 0.45);
 
-    // Bark rings at the ends.
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1;
-    for (let i = -1; i <= 1; i += 2) {
+    // Bark body — warmer, more saturated tones than the old muddy gradient,
+    // with a lighter highlight running along the top edge like sunlight.
+    const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    grad.addColorStop(0, '#C99459');
+    grad.addColorStop(0.35, '#A9713F');
+    grad.addColorStop(1, '#6E4526');
+    ctx.fillStyle = grad;
+    ctx.fill(bodyPath);
+    ctx.strokeStyle = 'rgba(50, 30, 14, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke(bodyPath);
+
+    // Diagonal bark grooves for texture, clipped to the log body.
+    ctx.save();
+    ctx.clip(bodyPath);
+    ctx.strokeStyle = 'rgba(40, 24, 10, 0.35)';
+    ctx.lineWidth = Math.max(1, h * 0.05);
+    const grooveSpacing = h * 0.32;
+    for (let x = -w / 2 - h; x < w / 2 + h; x += grooveSpacing) {
       ctx.beginPath();
-      ctx.ellipse(i * w * 0.36, 0, h * 0.16, h * 0.42, 0, 0, Math.PI * 2);
+      ctx.moveTo(x, -h / 2);
+      ctx.lineTo(x + h * 0.5, h / 2);
       ctx.stroke();
     }
+    ctx.restore();
+
+    // Cut end-caps: concentric tree rings at each tip, giving it a
+    // recognizable "sawn log" silhouette instead of a flat brown pill.
+    ctx.strokeStyle = 'rgba(255, 236, 205, 0.55)';
+    ctx.lineWidth = 1.2;
+    for (let i = -1; i <= 1; i += 2) {
+      const cx = i * w * 0.4;
+      const capGrad = ctx.createRadialGradient(cx, 0, 1, cx, 0, h * 0.42);
+      capGrad.addColorStop(0, '#F1D9A8');
+      capGrad.addColorStop(0.55, '#D9AE73');
+      capGrad.addColorStop(1, '#8A5A2E');
+      ctx.beginPath();
+      ctx.ellipse(cx, 0, h * 0.17, h * 0.42, 0, 0, Math.PI * 2);
+      ctx.fillStyle = capGrad;
+      ctx.fill();
+      for (let ring = 1; ring <= 3; ring++) {
+        ctx.beginPath();
+        ctx.ellipse(cx, 0, (h * 0.17 * ring) / 3.4, (h * 0.42 * ring) / 3.4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
     ctx.restore();
   }
 
