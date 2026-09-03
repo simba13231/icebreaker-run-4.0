@@ -77,28 +77,37 @@
         <h2 class="title title--sm">SELECT MODE</h2>
         <div class="spacer"></div>
       </div>
-      <div class="mode-grid">
-        <button id="btn-mode-endless" class="mode-card">
-          <span class="mode-card-icon">♾️</span>
-          <span class="mode-card-title">ENDLESS</span>
-          <span class="mode-card-desc">Survive as long as you can. Gets harder every 500 points.</span>
-        </button>
-        <button id="btn-mode-levels" class="mode-card">
-          <span class="mode-card-icon">🏁</span>
-          <span class="mode-card-title">LEVELS</span>
-          <span class="mode-card-desc">50 stages, each one tougher than the last.</span>
-        </button>
-        <button id="btn-mode-survival" class="mode-card">
-          <span class="mode-card-icon">❤️</span>
-          <span class="mode-card-title">SURVIVAL RUN</span>
-          <span class="mode-card-desc">3 lives, a health bar, and repair checkpoints every 1000 points.</span>
-        </button>
-        <button id="btn-mode-race" class="mode-card">
-          <span class="mode-card-icon">🚤</span>
-          <span class="mode-card-title">RACE</span>
-          <span class="mode-card-desc">Race rival boats to the finish line. Place top 3 for big coins.</span>
-        </button>
+      <div class="mode-carousel-wrap">
+        <button id="btn-mode-prev" class="mode-nav-arrow" aria-label="Previous modes">‹</button>
+        <div id="mode-carousel" class="mode-carousel">
+          <div class="mode-page">
+            <button id="btn-mode-endless" class="mode-card">
+              <span class="mode-card-icon">♾️</span>
+              <span class="mode-card-title">ENDLESS</span>
+              <span class="mode-card-desc">Survive as long as you can. Gets harder every 500 points.</span>
+            </button>
+            <button id="btn-mode-levels" class="mode-card">
+              <span class="mode-card-icon">🏁</span>
+              <span class="mode-card-title">LEVELS</span>
+              <span class="mode-card-desc">50 stages, each one tougher than the last.</span>
+            </button>
+          </div>
+          <div class="mode-page">
+            <button id="btn-mode-survival" class="mode-card">
+              <span class="mode-card-icon">❤️</span>
+              <span class="mode-card-title">SURVIVAL RUN</span>
+              <span class="mode-card-desc">3 lives, a health bar, and repair checkpoints every 1000 points.</span>
+            </button>
+            <button id="btn-mode-race" class="mode-card">
+              <span class="mode-card-icon">🚤</span>
+              <span class="mode-card-title">RACE</span>
+              <span class="mode-card-desc">Race rival boats to the finish line. Place top 3 for big coins.</span>
+            </button>
+          </div>
+        </div>
+        <button id="btn-mode-next" class="mode-nav-arrow" aria-label="Next modes">›</button>
       </div>
+      <div id="mode-carousel-dots" class="mode-carousel-dots"></div>
     </div>
   </section>
 
