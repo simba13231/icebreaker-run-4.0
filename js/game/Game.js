@@ -693,10 +693,16 @@ export class Game {
       }
 
       const magnetActive = this.powerUpManager.isActive('magnet');
+      // Scale the magnet's reach with the current lane width, not just a
+      // fixed pixel radius — on wide desktop windows the lanes are spread
+      // much further apart than on mobile, so a flat radius stops reaching
+      // coins in neighboring lanes. This keeps the mobile feel (radius
+      // rarely changes there) while fixing the desktop case.
+      const magnetRadius = Math.max(CONFIG.POWERUPS.MAGNET_RADIUS_PX, this.laneWidth * 1.5);
       for (const coin of this.coinPickups) {
         if (magnetActive) {
           const dist = Math.hypot(this.boat.x - coin.x, this.boat.y - coin.y);
-          if (dist < CONFIG.POWERUPS.MAGNET_RADIUS_PX) {
+          if (dist < magnetRadius) {
             coin.attractToward(this.boat.x, this.boat.y, deltaSec, 6);
           }
         }
