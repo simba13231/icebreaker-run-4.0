@@ -44,22 +44,9 @@
   }
 }
 
-/* Desktop — center the play area and give it a max width so vertical lanes
-   don't stretch absurdly wide on ultra-wide monitors */
-@media (min-width: 900px) {
-  #game-root {
-    max-width: 560px;
-    margin: 0 auto;
-    box-shadow: 0 0 80px rgba(0, 0, 0, 0.5);
-  }
-
-  body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at 50% 15%, #20aeeb, #0a3d6e 70%);
-  }
-}
+/* Desktop — #game-root already fills the viewport (see base.css); no
+   letterboxing override needed here anymore. Lane width scales naturally
+   from CONFIG.GAME.LANE_MARGIN_RATIO in js/config.js, same as mobile. */
 
 /* Landscape phones/tablets — game is still portrait-oriented internally,
    but keep the play column centered and avoid overly wide panels */
