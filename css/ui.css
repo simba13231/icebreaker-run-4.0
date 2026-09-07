@@ -858,7 +858,9 @@
 
 #btn-mute {
   position: absolute;
-  top: calc(16px + var(--safe-top));
+  /* Stacked below the HUD pause button (46px tall + 10px gap) so the two
+     top-right icon buttons never overlap on narrow/mobile viewports. */
+  top: calc(16px + var(--safe-top) + 46px + 10px);
   right: calc(16px + var(--safe-right));
   z-index: 7;
 }
