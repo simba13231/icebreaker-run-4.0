@@ -163,7 +163,21 @@ export const CONFIG = {
     BOAT_EQUIPPED_KEY: 'icebreakerRun.boatEquipped',
     LEVELS_UNLOCKED_KEY: 'icebreakerRun.levelsUnlocked',
     LEVELS_COMPLETED_KEY: 'icebreakerRun.levelsCompleted',
-    OBSTACLES_OWNED_KEY: 'icebreakerRun.obstaclesOwned'
+    OBSTACLES_OWNED_KEY: 'icebreakerRun.obstaclesOwned',
+    USERNAME_KEY: 'icebreakerRun.username'
+  },
+
+  // Global leaderboard, backed by a Cloudflare Worker + D1 (see
+  // workers/leaderboard/). API_BASE_URL is blank until that Worker is
+  // deployed — fill it in with the deployed Worker URL (e.g.
+  // 'https://icebreaker-leaderboard.<you>.workers.dev'). Until then, the
+  // leaderboard screen just shows "not available" and score submission is a
+  // harmless no-op — local high score tracking is unaffected either way.
+  LEADERBOARD: {
+    API_BASE_URL: '',
+    TOP_SCORES_LIMIT: 50,
+    USERNAME_MIN_LENGTH: 2,
+    USERNAME_MAX_LENGTH: 16
   },
 
   RENDER: {

@@ -31,10 +31,11 @@ import { Spawner, createHazardsForRow } from '../systems/Spawner.js';
 import { InputManager } from '../systems/InputManager.js';
 import { AudioManager } from '../systems/AudioManager.js';
 import { ScoreManager } from '../systems/ScoreManager.js';
-import { StorageManager, LocalLeaderboardService } from '../systems/StorageManager.js';
+import { StorageManager, LocalLeaderboardService, CloudLeaderboardService } from '../systems/StorageManager.js';
 import { AdProvider } from '../systems/AdProvider.js';
 import { PowerUpManager } from '../systems/PowerUpManager.js';
 import { RaceManager } from '../systems/RaceManager.js';
+import { validateUsername } from '../systems/ProfanityFilter.js';
 
 import { Renderer } from '../rendering/Renderer.js';
 import { UIManager } from '../ui/UIManager.js';
@@ -65,6 +66,7 @@ export class Game {
     this.audio = new AudioManager();
     this.storage = new StorageManager();
     this.leaderboard = new LocalLeaderboardService(this.storage);
+    this.cloudLeaderboard = new CloudLeaderboardService(CONFIG.LEADERBOARD.API_BASE_URL);
     this.progression = new Progression(this.storage);
     this.adProvider = new AdProvider();
 
@@ -117,10 +119,17 @@ export class Game {
     this._resetEntities();
 
     this.state.onChange((state) => this._onStateChange(state));
-    this.ui.showForState(States.MENU, {
-      highScore: this.leaderboard.getHighScore(),
-      coins: this.progression.coins
-    });
+    if (this.storage.getUsername()) {
+      this.ui.showForState(States.MENU, {
+        highScore: this.leaderboard.getHighScore(),
+        coins: this.progression.coins
+      });
+    } else {
+      // First launch (or storage was cleared) — ask for a leaderboard name
+      // before showing the main menu at all.
+      this.state.set(States.USERNAME_ENTRY);
+      this.ui.showForState(States.USERNAME_ENTRY);
+    }
     this.ui.applySettingsToControls(this.settings);
 
     this.loop.start();
@@ -158,6 +167,11 @@ export class Game {
     this.ui.el.btnBoatShopBack.addEventListener('click', () => this._backToMenu());
     this.ui.onBoatAction((action, boatId) => this._handleBoatAction(action, boatId));
     this.ui.onObstacleAction((action, obstacleId) => this._handleObstacleAction(action, obstacleId));
+
+    // Username entry (first launch) + global leaderboard
+    this.ui.onUsernameSubmit((rawValue) => this._handleUsernameSubmit(rawValue));
+    this.ui.el.btnLeaderboardOpen.addEventListener('click', () => this._openLeaderboard());
+    this.ui.el.btnLeaderboardBack.addEventListener('click', () => this._backToMenu());
 
     // Level complete
     this.ui.el.btnNextLevel.addEventListener('click', () =>
@@ -343,6 +357,43 @@ export class Game {
     });
   }
 
+  _handleUsernameSubmit(rawValue) {
+    const result = validateUsername(rawValue);
+    if (!result.valid) {
+      this.ui.showUsernameError(result.error);
+      return;
+    }
+    this.storage.setUsername(result.cleaned);
+    this.audio.click();
+    this.state.set(States.MENU);
+    this.ui.showForState(States.MENU, {
+      highScore: this.leaderboard.getHighScore(),
+      coins: this.progression.coins
+    });
+  }
+
+  async _openLeaderboard() {
+    this.audio.click();
+    this.state.set(States.LEADERBOARD);
+    this.ui.showForState(States.LEADERBOARD);
+
+    if (!this.cloudLeaderboard.isConfigured) {
+      this.ui.showLeaderboardStatus('Leaderboard is not set up yet — check back soon!');
+      return;
+    }
+
+    this.ui.showLeaderboardStatus('Loading…');
+    try {
+      const scores = await this.cloudLeaderboard.getTopScores(CONFIG.LEADERBOARD.TOP_SCORES_LIMIT);
+      // Guard against the player navigating away before the fetch resolved.
+      if (this.state.is(States.LEADERBOARD)) this.ui.renderLeaderboard(scores);
+    } catch (err) {
+      if (this.state.is(States.LEADERBOARD)) {
+        this.ui.showLeaderboardStatus("Couldn't load leaderboard — check your connection.");
+      }
+    }
+  }
+
   _startRun(mode, levelNumber = null) {
     this.mode = mode;
     if (mode === 'level') {
@@ -470,6 +521,13 @@ export class Game {
     this.renderer.effects.emitCollision(this.boat.x, this.boat.y);
 
     const result = this.leaderboard.submitScore(this.scoreManager.displayScore);
+
+    // Best-effort global leaderboard submission — never blocks or affects
+    // the game-over screen, which only ever reflects the local high score.
+    const username = this.storage.getUsername();
+    if (username && this.cloudLeaderboard.isConfigured) {
+      this.cloudLeaderboard.submitScore(username, this.scoreManager.displayScore).catch(() => {});
+    }
     const canRevive =
       (this.mode === 'endless' || this.mode === 'level') &&
       this.scoreManager.displayScore < CONFIG.REVIVE.SCORE_CAP;

@@ -7,8 +7,13 @@
 // leaderboard can be swapped in without touching game code:
 //
 //   LeaderboardService (interface, duck-typed)
-//   ├── LocalLeaderboardService   (implemented now, uses localStorage)
-//   └── CloudLeaderboardService   (future — see workers/README.md)
+//   ├── LocalLeaderboardService   (on-device high score, via localStorage)
+//   └── CloudLeaderboardService   (global leaderboard, via the Cloudflare
+//                                  Worker + D1 backend in workers/leaderboard/)
+//
+// Game.js uses both side by side: Local for the instant, offline-safe
+// personal high score; Cloud for the shared leaderboard screen and
+// best-effort score submission after a run.
 //
 // v2 additions: coins, owned/equipped boats, and level unlock/completion
 // progress. All new reads have safe, sensible defaults so existing players
@@ -136,6 +141,17 @@ export class StorageManager {
   setOwnedObstacles(list) {
     return this._set(CONFIG.STORAGE.OBSTACLES_OWNED_KEY, list);
   }
+
+  // --- Leaderboard username --------------------------------------------------
+
+  getUsername() {
+    const value = this._get(CONFIG.STORAGE.USERNAME_KEY, '');
+    return typeof value === 'string' ? value : '';
+  }
+
+  setUsername(name) {
+    return this._set(CONFIG.STORAGE.USERNAME_KEY, name);
+  }
 }
 
 /**
@@ -161,5 +177,47 @@ export class LocalLeaderboardService {
       return { isNewRecord: true, highScore: score };
     }
     return { isNewRecord: false, highScore: current };
+  }
+}
+
+/**
+ * CloudLeaderboardService — talks to the Cloudflare Worker + D1 backend in
+ * workers/leaderboard/ for a *global* leaderboard shared across players.
+ * This is separate from LocalLeaderboardService (which still drives the
+ * player's own on-device high score, shown instantly with no network
+ * dependency). Score submission and leaderboard fetches here are always
+ * best-effort: if apiBaseUrl isn't configured yet, or the request fails
+ * (offline, Worker down), calls resolve/no-op quietly rather than breaking
+ * gameplay.
+ *
+ *   getTopScores(limit): Promise<Array<{ name, score, created_at }>>
+ *   submitScore(name, score): Promise<{ ok, rank } | null>
+ */
+export class CloudLeaderboardService {
+  constructor(apiBaseUrl) {
+    this.apiBaseUrl = (apiBaseUrl || '').replace(/\/$/, '');
+  }
+
+  get isConfigured() {
+    return Boolean(this.apiBaseUrl);
+  }
+
+  async getTopScores(limit = 50) {
+    if (!this.isConfigured) return [];
+    const res = await fetch(`${this.apiBaseUrl}/api/scores?limit=${encodeURIComponent(limit)}`);
+    if (!res.ok) throw new Error(`Leaderboard fetch failed (${res.status})`);
+    const data = await res.json();
+    return Array.isArray(data.scores) ? data.scores : [];
+  }
+
+  async submitScore(name, score) {
+    if (!this.isConfigured) return null;
+    const res = await fetch(`${this.apiBaseUrl}/api/scores`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, score })
+    });
+    if (!res.ok) throw new Error(`Score submit failed (${res.status})`);
+    return res.json();
   }
 }

@@ -1,0 +1,8 @@
+name = "icebreaker-leaderboard"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "icebreaker-leaderboard"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"

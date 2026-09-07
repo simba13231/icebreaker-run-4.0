@@ -74,6 +74,7 @@
       </div>
       <button id="btn-play" class="btn btn--primary btn--pulse">▶ PLAY</button>
       <button id="btn-boat-shop-open" class="btn btn--secondary">🚤 SHOP</button>
+      <button id="btn-leaderboard-open" class="btn btn--secondary">🏆 LEADERBOARD</button>
       <button id="btn-settings-open" class="btn btn--secondary">⚙ SETTINGS</button>
     </div>
   </section>
@@ -294,6 +295,42 @@
     <button id="btn-left" class="touch-btn" aria-label="Move left">◀</button>
     <button id="btn-right" class="touch-btn" aria-label="Move right">▶</button>
   </div>
+
+  <!-- First-launch username prompt (shown once, before the main menu, until
+       a name is set) -->
+  <section id="screen-username" class="screen" aria-label="Choose a username">
+    <div class="panel">
+      <h2 class="title title--sm">PICK A NAME</h2>
+      <p class="subtitle">This is what shows on the global leaderboard.</p>
+      <input
+        id="username-input"
+        class="text-input"
+        type="text"
+        maxlength="16"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="Your name"
+      />
+      <p id="username-error" class="field-error"></p>
+      <div class="button-stack">
+        <button id="btn-username-submit" class="btn btn--primary">CONTINUE ▶</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Global Leaderboard -->
+  <section id="screen-leaderboard" class="screen" aria-label="Leaderboard">
+    <div class="panel panel--wide panel--scrollable">
+      <div class="panel-header">
+        <button id="btn-leaderboard-back" class="btn btn--icon" aria-label="Back">←</button>
+        <h2 class="title title--sm">LEADERBOARD</h2>
+        <div class="spacer"></div>
+      </div>
+      <p id="leaderboard-status" class="subtitle hidden">Loading…</p>
+      <div id="leaderboard-list" class="leaderboard-list"></div>
+    </div>
+  </section>
 </div>
 <script type="module" src="js/main.js"></script>
 </body>

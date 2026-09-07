@@ -26,6 +26,8 @@ export class UIManager {
       checkpoint: document.getElementById('screen-checkpoint'),
       raceCountdown: document.getElementById('screen-race-countdown'),
       raceResults: document.getElementById('screen-race-results'),
+      usernameScreen: document.getElementById('screen-username'),
+      leaderboardScreen: document.getElementById('screen-leaderboard'),
 
       menuCoins: document.getElementById('menu-coins'),
       menuHighScore: document.getElementById('menu-high-score'),
@@ -115,7 +117,16 @@ export class UIManager {
       modeCarousel: document.getElementById('mode-carousel'),
       modeCarouselDots: document.getElementById('mode-carousel-dots'),
       btnModePrev: document.getElementById('btn-mode-prev'),
-      btnModeNext: document.getElementById('btn-mode-next')
+      btnModeNext: document.getElementById('btn-mode-next'),
+
+      usernameInput: document.getElementById('username-input'),
+      usernameError: document.getElementById('username-error'),
+      btnUsernameSubmit: document.getElementById('btn-username-submit'),
+
+      btnLeaderboardOpen: document.getElementById('btn-leaderboard-open'),
+      btnLeaderboardBack: document.getElementById('btn-leaderboard-back'),
+      leaderboardList: document.getElementById('leaderboard-list'),
+      leaderboardStatus: document.getElementById('leaderboard-status')
     };
 
     this._screens = [
@@ -129,15 +140,25 @@ export class UIManager {
       this.el.settings,
       this.el.checkpoint,
       this.el.raceCountdown,
-      this.el.raceResults
+      this.el.raceResults,
+      this.el.usernameScreen,
+      this.el.leaderboardScreen
     ];
 
     this._levelSelectListeners = new Set();
     this._boatActionListeners = new Set();
     this._obstacleActionListeners = new Set();
+    this._usernameSubmitListeners = new Set();
 
     this.el.btnShopTabBoats.addEventListener('click', () => this._setShopTab('boats'));
     this.el.btnShopTabObstacles.addEventListener('click', () => this._setShopTab('obstacles'));
+
+    this.el.btnUsernameSubmit.addEventListener('click', () =>
+      this._emitUsernameSubmit(this.el.usernameInput.value)
+    );
+    this.el.usernameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this._emitUsernameSubmit(this.el.usernameInput.value);
+    });
 
     this._initModeCarousel();
   }
@@ -202,6 +223,17 @@ export class UIManager {
         this.el.hud.classList.remove('visible');
         this.el.menuHighScore.textContent = ScoreManager.format(context.highScore || 0);
         this.el.menuCoins.textContent = String(context.coins || 0);
+        break;
+      case States.USERNAME_ENTRY:
+        this._hideAllScreens();
+        this.el.usernameScreen.classList.add('visible');
+        this.el.usernameInput.value = '';
+        this.el.usernameError.textContent = '';
+        setTimeout(() => this.el.usernameInput.focus(), 50);
+        break;
+      case States.LEADERBOARD:
+        this._hideAllScreens();
+        this.el.leaderboardScreen.classList.add('visible');
         break;
       case States.MODE_SELECT:
         this._hideAllScreens();
@@ -384,6 +416,65 @@ export class UIManager {
     // Force reflow so the class can be re-added to replay the animation on repeat races.
     void this.el.raceResultsCoins.offsetWidth;
     this.el.raceResultsCoins.classList.add('coin-reward-pop');
+  }
+
+  // --- Username entry ----------------------------------------------------------
+
+  onUsernameSubmit(listener) {
+    this._usernameSubmitListeners.add(listener);
+    return () => this._usernameSubmitListeners.delete(listener);
+  }
+
+  _emitUsernameSubmit(rawValue) {
+    for (const l of this._usernameSubmitListeners) l(rawValue);
+  }
+
+  /** Shows a validation error under the username field (empty string clears it). */
+  showUsernameError(message) {
+    this.el.usernameError.textContent = message || '';
+  }
+
+  // --- Leaderboard ---------------------------------------------------------------
+
+  /** Shows a status line (loading / error / empty state) instead of the score list. */
+  showLeaderboardStatus(message) {
+    this.el.leaderboardList.innerHTML = '';
+    this.el.leaderboardStatus.textContent = message;
+    this.el.leaderboardStatus.classList.remove('hidden');
+  }
+
+  /** Renders the fetched top-scores list, replacing any status message. */
+  renderLeaderboard(scores) {
+    const list = this.el.leaderboardList;
+    list.innerHTML = '';
+
+    if (!scores || scores.length === 0) {
+      this.showLeaderboardStatus('No scores yet — be the first!');
+      return;
+    }
+
+    this.el.leaderboardStatus.classList.add('hidden');
+    scores.forEach((entry, index) => {
+      const row = document.createElement('div');
+      row.className = 'leaderboard-row';
+
+      const rank = document.createElement('span');
+      rank.className = 'leaderboard-rank';
+      rank.textContent = String(index + 1);
+
+      const name = document.createElement('span');
+      name.className = 'leaderboard-name';
+      name.textContent = String(entry.name || '???'); // textContent — never innerHTML for player-supplied names
+
+      const score = document.createElement('span');
+      score.className = 'leaderboard-score';
+      score.textContent = ScoreManager.format(entry.score || 0);
+
+      row.appendChild(rank);
+      row.appendChild(name);
+      row.appendChild(score);
+      list.appendChild(row);
+    });
   }
 
   applySettingsToControls(settings) {
