@@ -168,13 +168,9 @@ export const CONFIG = {
   },
 
   // Global leaderboard, backed by a Cloudflare Worker + D1 (see
-  // workers/leaderboard/). API_BASE_URL is blank until that Worker is
-  // deployed — fill it in with the deployed Worker URL (e.g.
-  // 'https://icebreaker-leaderboard.<you>.workers.dev'). Until then, the
-  // leaderboard screen just shows "not available" and score submission is a
-  // harmless no-op — local high score tracking is unaffected either way.
+  // workers/leaderboard/).
   LEADERBOARD: {
-    API_BASE_URL: '',
+    API_BASE_URL: 'https://icebreaker-leaderboard.hartayk30.workers.dev',
     TOP_SCORES_LIMIT: 50,
     USERNAME_MIN_LENGTH: 2,
     USERNAME_MAX_LENGTH: 16
