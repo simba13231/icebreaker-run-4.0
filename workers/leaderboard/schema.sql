@@ -8,3 +8,4 @@ CREATE TABLE IF NOT EXISTS scores (
 
 CREATE INDEX IF NOT EXISTS idx_scores_score ON scores (score DESC);
 CREATE INDEX IF NOT EXISTS idx_scores_ip_created ON scores (ip, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_scores_name_unique ON scores (name);

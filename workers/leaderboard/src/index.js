@@ -87,14 +87,29 @@ async function handlePostScore(request, env) {
     }
   }
 
-  await env.DB.prepare('INSERT INTO scores (name, score, ip) VALUES (?, ?, ?)').bind(name, score, ip).run();
+  await env.DB.prepare(
+    `INSERT INTO scores (name, score, ip) VALUES (?, ?, ?)
+     ON CONFLICT(name) DO UPDATE SET
+       score = excluded.score,
+       ip = excluded.ip,
+       created_at = CURRENT_TIMESTAMP
+     WHERE excluded.score > scores.score`
+  )
+    .bind(name, score, ip)
+    .run();
+
+  // Read back whatever is actually stored now — if this submission wasn't a
+  // personal best, that's still the player's previous (higher) score, not
+  // the one they just submitted.
+  const stored = await env.DB.prepare('SELECT score FROM scores WHERE name = ?').bind(name).first();
+  const storedScore = stored ? stored.score : score;
 
   const higher = await env.DB.prepare('SELECT COUNT(*) AS higherCount FROM scores WHERE score > ?')
-    .bind(score)
+    .bind(storedScore)
     .first();
   const rank = (higher ? higher.higherCount : 0) + 1;
 
-  return json({ ok: true, rank });
+  return json({ ok: true, rank, score: storedScore, isNewRecord: storedScore === score });
 }
 
 function isAdminAuthorized(request, env) {

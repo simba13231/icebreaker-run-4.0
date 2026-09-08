@@ -42,6 +42,16 @@ Copy the printed `database_id` into `wrangler.toml`.
 wrangler d1 execute icebreaker-leaderboard --remote --file=./migrations/0002_accounts_and_codes.sql
 ```
 
+**One leaderboard row per player, not one per run:**
+
+```
+wrangler d1 execute icebreaker-leaderboard --remote --file=./migrations/0003_leaderboard_best_score_per_name.sql
+```
+
+This collapses any existing duplicate rows per name down to each player's
+best score, then adds a unique index so future submissions update that row
+in place — a personal best replaces it, a lower score is silently ignored.
+
 **Set the admin secret** (pick your own long random string — this is the
 key you'll type into the admin panel):
 
