@@ -48,6 +48,15 @@ export class InputManager {
   }
 
   _onKeyDown(e) {
+    // Let normal typing happen when a text field has focus — otherwise
+    // lane-movement keys (a/d/arrows) would eat every keystroke typed into
+    // the username or redeem-code inputs.
+    const target = e.target;
+    const tag = target && target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || (target && target.isContentEditable)) {
+      return;
+    }
+
     switch (e.key) {
       case 'ArrowLeft':
       case 'a':
