@@ -32,7 +32,15 @@ function normalize(str) {
     .replace(/(.)\1+/g, '$1'); // collapse repeated letters (fuuuck -> fuck)
 }
 
+// Normalize the blocklist itself the same way input gets normalized. This
+// matters: several blocklist words (e.g. "nigger", "asshole", "bollocks")
+// contain a naturally doubled letter, so without this the collapse step
+// above would turn typed input into a form that no longer matches the
+// blocklist word at all ("nigger" -> "niger" collapses right past the
+// literal "nigger" entry). Normalizing both sides the same way fixes that.
+const NORMALIZED_BLOCKLIST = [...new Set(BLOCKLIST.map(normalize))];
+
 export function containsProfanity(input) {
   const normalized = normalize(input || '');
-  return BLOCKLIST.some((word) => normalized.includes(word));
+  return NORMALIZED_BLOCKLIST.some((word) => normalized.includes(word));
 }
