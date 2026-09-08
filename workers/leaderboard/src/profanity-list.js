@@ -11,11 +11,31 @@
 // client already checked.
 
 const BLOCKLIST = [
-  'fuck', 'shit', 'bitch', 'cunt', 'asshole', 'dick', 'cock', 'pussy',
-  'whore', 'slut', 'bastard', 'twat', 'wanker', 'bollocks', 'douche',
-  'motherfucker', 'nigger', 'nigga', 'faggot', 'fag', 'dyke', 'retard',
-  'chink', 'spic', 'kike', 'gook', 'coon', 'tranny', 'rapist', 'nazi',
-  'niger', 'niga'
+  'fuck', 'fucking', 'fucked', 'fucker', 'fuckers', 'motherfuck', 'motherfucking',
+  'shit', 'shitty', 'bullshit', 'horseshit', 'dipshit', 'shithead',
+  'bitch', 'bitches', 'bitchy', 'sonofabitch',
+  'cunt', 'cunts',
+  'ass', 'asses', 'asshole', 'assholes', 'arse', 'arsehole', 'dumbass',
+  'jackass', 'badass', 'smartass', 'hardass',
+  'dick', 'dicks', 'dickhead', 'cock', 'cocks', 'cocksucker',
+  'pussy', 'pussies',
+  'whore', 'whores', 'slut', 'sluts', 'slutty',
+  'bastard', 'bastards', 'twat', 'twats', 'wanker', 'wankers',
+  'bollocks', 'douche', 'douchebag', 'douchebags',
+  'prick', 'pricks', 'tosser', 'tosspots',
+  'jerkoff', 'jerkoff', 'jackoff', 'jackoff',
+  'dipshit', 'dumbfuck', 'fuckwit', 'shitface', 'shithead',
+  'scumbag', 'scumbags', 'dirtbag', 'douchecanoe',
+  'motherfucker', 'motherfuckers',
+  'faggot', 'fag', 'fags', 'dyke',
+  'retard', 'retarded', 'tard',
+  'chink', 'spic', 'kike', 'gook', 'coon', 'tranny',
+  'nigger', 'nigga', 'niger', 'niga', 'nig',
+  'rapist', 'nazi',
+  'goon', 'gooner',
+  'moron', 'idiot', 'imbecile', 'dumbass', 'dumbfuck',
+  'loser', 'scumbag', 'shitbag', 'asswipe', 'asshat',
+  'crackhead', 'dipstick', 'dumbshit', 'fuckface', 'wanker',
 ];
 
 function normalize(str) {
