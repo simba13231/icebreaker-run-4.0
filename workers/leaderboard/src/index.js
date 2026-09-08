@@ -32,6 +32,9 @@ import {
   handleAdminListPlayers,
   handleAdminGrant,
   handleAdminReset,
+  handleAdminBan,
+  handleAdminUnban,
+  handleAdminDeletePlayer,
   handleAdminListScores,
   handleAdminDeleteScore,
   handleAdminListCodes,
@@ -46,8 +49,17 @@ async function handleGetScores(url, env) {
   const requested = Number(url.searchParams.get('limit'));
   const limit = Number.isFinite(requested) ? Math.min(100, Math.max(1, Math.floor(requested))) : 50;
 
+  // Left-join players so banned accounts' scores are excluded from the
+  // public leaderboard. A missing player row (shouldn't normally happen,
+  // but the scores table predates accounts) is treated as not-banned so
+  // older entries aren't accidentally hidden.
   const { results } = await env.DB.prepare(
-    'SELECT name, score, created_at FROM scores ORDER BY score DESC, created_at ASC LIMIT ?'
+    `SELECT scores.name, scores.score, scores.created_at
+     FROM scores
+     LEFT JOIN players ON players.username = scores.name
+     WHERE players.banned IS NULL OR players.banned = 0
+     ORDER BY scores.score DESC, scores.created_at ASC
+     LIMIT ?`
   )
     .bind(limit)
     .all();
@@ -117,6 +129,16 @@ function isAdminAuthorized(request, env) {
   return Boolean(env.ADMIN_KEY) && key === env.ADMIN_KEY;
 }
 
+/**
+ * Second, separate secret required in addition to the admin key for the
+ * genuinely irreversible actions (ban/unban/full account deletion) — so
+ * having the regular admin key alone isn't enough to do those.
+ */
+function isDangerAuthorized(request, env) {
+  const key = request.headers.get('X-Danger-Key') || '';
+  return Boolean(env.DANGER_KEY) && key === env.DANGER_KEY;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -151,6 +173,18 @@ export default {
 
       const resetMatch = path.match(/^\/api\/admin\/players\/([^/]+)\/reset$/);
       if (resetMatch && request.method === 'POST') return handleAdminReset(decodeURIComponent(resetMatch[1]), request, env);
+
+      // --- Danger-gated: ban / unban / full account removal -----------------
+      const banMatch = path.match(/^\/api\/admin\/players\/([^/]+)\/ban$/);
+      const unbanMatch = path.match(/^\/api\/admin\/players\/([^/]+)\/unban$/);
+      const deletePlayerMatch = path.match(/^\/api\/admin\/players\/([^/]+)$/);
+
+      if ((banMatch || unbanMatch || (deletePlayerMatch && request.method === 'DELETE')) && !isDangerAuthorized(request, env)) {
+        return json({ error: 'Incorrect danger key.' }, 403);
+      }
+      if (banMatch && request.method === 'POST') return handleAdminBan(decodeURIComponent(banMatch[1]), env);
+      if (unbanMatch && request.method === 'POST') return handleAdminUnban(decodeURIComponent(unbanMatch[1]), env);
+      if (deletePlayerMatch && request.method === 'DELETE') return handleAdminDeletePlayer(decodeURIComponent(deletePlayerMatch[1]), env);
 
       if (path === '/api/admin/leaderboard' && request.method === 'GET') return handleAdminListScores(url, env);
 

@@ -52,6 +52,20 @@ This collapses any existing duplicate rows per name down to each player's
 best score, then adds a unique index so future submissions update that row
 in place — a personal best replaces it, a lower score is silently ignored.
 
+**Player banning:**
+
+```
+wrangler d1 execute icebreaker-leaderboard --remote --file=./migrations/0004_player_banning.sql
+```
+
+**Set the danger secret** (separate from `ADMIN_KEY` — required in addition
+to it for ban/unban/full account removal, so the regular admin key alone
+isn't enough for those three actions):
+
+```
+wrangler secret put DANGER_KEY
+```
+
 **Set the admin secret** (pick your own long random string — this is the
 key you'll type into the admin panel):
 
@@ -92,6 +106,13 @@ normal static page, just not linked from the game's menu) and enter the
   friend.
 - **Reset** a player back to defaults (coins, boats, obstacles, levels),
   optionally clearing their leaderboard scores too.
+- **Ban / unban** a player — hides them from the public leaderboard and
+  blocks them from redeeming codes, without touching their local play or
+  progress sync. Requires the separate `DANGER_KEY` in addition to the
+  regular admin key.
+- **Remove** a player's account entirely — unlike Reset (which keeps the
+  row but zeroes it), this deletes the account, their leaderboard entry,
+  and their code-redemption history outright. Also requires `DANGER_KEY`.
 - **Create/delete redeem codes** — coins + an optional single item reward,
   with optional max-uses and an optional expiry date.
 - **Moderate the leaderboard** — delete individual score entries.
@@ -118,11 +139,16 @@ keep the key itself private, not the URL.
 - `GET /api/admin/players?search=` → `{ players }`
 - `POST /api/admin/players/:username/grant` `{ coins?, boatId?, obstacleId? }` → `{ ok, player }`
 - `POST /api/admin/players/:username/reset` `{ clearScores? }` → `{ ok }`
-- `GET /api/admin/leaderboard?limit=200` → `{ scores }`
+- `GET /api/admin/leaderboard?limit=200` → `{ scores }` (includes `banned` per row)
 - `DELETE /api/admin/leaderboard/:id` → `{ ok }`
 - `GET /api/admin/codes` → `{ codes }`
 - `POST /api/admin/codes` `{ code, coinsReward, itemType, itemId, maxUses, expiresAt }` → `{ ok }`
 - `DELETE /api/admin/codes/:code` → `{ ok }`
+
+**Admin, also requires `X-Danger-Key: <DANGER_KEY>`**
+- `POST /api/admin/players/:username/ban` → `{ ok }`
+- `POST /api/admin/players/:username/unban` → `{ ok }`
+- `DELETE /api/admin/players/:username` → `{ ok }` (full account removal — see above)
 
 All usernames (both leaderboard names and account registration) are
 validated server-side against the same character rules and profanity

@@ -204,6 +204,19 @@
   .empty-note { color: var(--text-dim); font-size: 0.85rem; margin: 0; }
 
   .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+
+  .badge-banned {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    border-radius: 3px;
+    padding: 1px 5px;
+    vertical-align: middle;
+  }
+  .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+  .actions-cell button { padding: 6px 10px; font-size: 0.78rem; }
 </style>
 </head>
 <body>
@@ -409,13 +422,19 @@ function renderPlayersTable(players) {
   }
   const rows = players.map((p) => `
     <tr>
-      <td>${escapeHtml(p.username)}</td>
+      <td>${escapeHtml(p.username)}${p.banned ? ' <span class="badge-banned">BANNED</span>' : ''}</td>
       <td>${p.coins}</td>
       <td>${escapeHtml((p.boatsOwned || []).join(', '))}</td>
       <td>${escapeHtml((p.obstaclesOwned || []).join(', '))}</td>
       <td>${escapeHtml(p.boatEquipped)}</td>
       <td>${escapeHtml(p.updatedAt || '')}</td>
-      <td><button class="danger" data-reset="${escapeHtml(p.username)}">Reset</button></td>
+      <td class="actions-cell">
+        <button class="secondary" data-reset="${escapeHtml(p.username)}">Reset</button>
+        ${p.banned
+          ? `<button class="secondary" data-unban="${escapeHtml(p.username)}">Unban</button>`
+          : `<button class="danger" data-ban="${escapeHtml(p.username)}">Ban</button>`}
+        <button class="danger" data-remove="${escapeHtml(p.username)}">Remove</button>
+      </td>
     </tr>
   `).join('');
   wrap.innerHTML = `
@@ -426,6 +445,15 @@ function renderPlayersTable(players) {
   `;
   wrap.querySelectorAll('[data-reset]').forEach((btn) => {
     btn.addEventListener('click', () => resetPlayer(btn.dataset.reset));
+  });
+  wrap.querySelectorAll('[data-ban]').forEach((btn) => {
+    btn.addEventListener('click', () => banPlayer(btn.dataset.ban));
+  });
+  wrap.querySelectorAll('[data-unban]').forEach((btn) => {
+    btn.addEventListener('click', () => unbanPlayer(btn.dataset.unban));
+  });
+  wrap.querySelectorAll('[data-remove]').forEach((btn) => {
+    btn.addEventListener('click', () => removePlayer(btn.dataset.remove));
   });
 }
 
@@ -460,6 +488,60 @@ async function resetPlayer(username) {
     refreshLeaderboard();
   } catch (err) {
     alert(err.message);
+  }
+}
+
+// --- Danger-gated actions (ban / unban / remove) --------------------------------
+// These require a second secret (the Worker's DANGER_KEY), separate from the
+// admin key that unlocked this panel — prompted for fresh each time rather
+// than stored, so it's never sitting in sessionStorage.
+
+async function dangerFetch(path, options = {}) {
+  const dangerKey = prompt('Enter the danger key to confirm this action:');
+  if (!dangerKey) throw new Error('Cancelled.');
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Key': adminKey,
+      'X-Danger-Key': dangerKey,
+      ...(options.headers || {})
+    }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+async function banPlayer(username) {
+  if (!confirm(`Ban ${username}? They'll be hidden from the leaderboard and blocked from redeeming codes until unbanned.`)) return;
+  try {
+    await dangerFetch(`/api/admin/players/${encodeURIComponent(username)}/ban`, { method: 'POST' });
+    refreshPlayers(document.getElementById('player-search').value.trim());
+    refreshLeaderboard();
+  } catch (err) {
+    if (err.message !== 'Cancelled.') alert(err.message);
+  }
+}
+
+async function unbanPlayer(username) {
+  try {
+    await dangerFetch(`/api/admin/players/${encodeURIComponent(username)}/unban`, { method: 'POST' });
+    refreshPlayers(document.getElementById('player-search').value.trim());
+    refreshLeaderboard();
+  } catch (err) {
+    if (err.message !== 'Cancelled.') alert(err.message);
+  }
+}
+
+async function removePlayer(username) {
+  if (!confirm(`Permanently remove ${username}'s account? This deletes their coins/boats/progress and leaderboard entry entirely — not a reset, an actual delete. This can't be undone.`)) return;
+  try {
+    await dangerFetch(`/api/admin/players/${encodeURIComponent(username)}`, { method: 'DELETE' });
+    refreshPlayers(document.getElementById('player-search').value.trim());
+    refreshLeaderboard();
+  } catch (err) {
+    if (err.message !== 'Cancelled.') alert(err.message);
   }
 }
 
@@ -608,7 +690,7 @@ function renderLeaderboardTable(scores) {
   const rows = scores.map((s, i) => `
     <tr>
       <td class="${rankClass(i)}">${i + 1}</td>
-      <td>${escapeHtml(s.name)}</td>
+      <td>${escapeHtml(s.name)}${s.banned ? ' <span class="badge-banned">BANNED</span>' : ''}</td>
       <td>${s.score}</td>
       <td>${escapeHtml(s.created_at || '')}</td>
       <td><button class="danger" data-delete-score="${s.id}">Delete</button></td>

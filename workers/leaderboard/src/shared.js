@@ -58,6 +58,7 @@ export function playerRowToSnapshot(row) {
     obstaclesOwned: parseArrayColumn(row.obstacles_owned, ['iceberg']),
     levelsUnlocked: row.levels_unlocked,
     levelsCompleted: parseArrayColumn(row.levels_completed, []),
+    banned: Boolean(row.banned),
     updatedAt: row.updated_at
   };
 }

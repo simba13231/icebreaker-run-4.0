@@ -105,6 +105,40 @@ export async function handleAdminReset(username, request, env) {
   return json({ ok: true });
 }
 
+// --- Ban / unban / remove (danger-gated — see index.js) ------------------------
+
+export async function handleAdminBan(username, env) {
+  const result = await env.DB.prepare(
+    'UPDATE players SET banned = 1, updated_at = CURRENT_TIMESTAMP WHERE username = ?'
+  )
+    .bind(username)
+    .run();
+  if (!result.meta || result.meta.changes === 0) return json({ error: 'Player not found.' }, 404);
+  return json({ ok: true });
+}
+
+export async function handleAdminUnban(username, env) {
+  const result = await env.DB.prepare(
+    'UPDATE players SET banned = 0, updated_at = CURRENT_TIMESTAMP WHERE username = ?'
+  )
+    .bind(username)
+    .run();
+  if (!result.meta || result.meta.changes === 0) return json({ error: 'Player not found.' }, 404);
+  return json({ ok: true });
+}
+
+/** Fully deletes the account (unlike reset, which keeps the row but zeroes it). */
+export async function handleAdminDeletePlayer(username, env) {
+  const result = await env.DB.prepare('DELETE FROM players WHERE username = ?').bind(username).run();
+  if (!result.meta || result.meta.changes === 0) return json({ error: 'Player not found.' }, 404);
+
+  // Clean up anything referencing this username so nothing orphaned lingers.
+  await env.DB.prepare('DELETE FROM scores WHERE name = ?').bind(username).run();
+  await env.DB.prepare('DELETE FROM code_redemptions WHERE username = ?').bind(username).run();
+
+  return json({ ok: true });
+}
+
 // --- Leaderboard moderation ---------------------------------------------------
 
 export async function handleAdminListScores(url, env) {
@@ -112,7 +146,12 @@ export async function handleAdminListScores(url, env) {
   const limit = Number.isFinite(requested) ? Math.min(500, Math.max(1, Math.floor(requested))) : 200;
 
   const { results } = await env.DB.prepare(
-    'SELECT id, name, score, created_at FROM scores ORDER BY score DESC, created_at ASC LIMIT ?'
+    `SELECT scores.id, scores.name, scores.score, scores.created_at,
+            COALESCE(players.banned, 0) AS banned
+     FROM scores
+     LEFT JOIN players ON players.username = scores.name
+     ORDER BY scores.score DESC, scores.created_at ASC
+     LIMIT ?`
   )
     .bind(limit)
     .all();

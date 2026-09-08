@@ -20,6 +20,7 @@ export async function handleRedeem(request, env) {
 
   const player = await env.DB.prepare('SELECT * FROM players WHERE username = ?').bind(username).first();
   if (!player) return json({ error: 'Player not registered yet — open the game once first.' }, 404);
+  if (player.banned) return json({ error: 'This account is banned.' }, 403);
 
   const codeRow = await env.DB.prepare('SELECT * FROM codes WHERE code = ?').bind(code).first();
   if (!codeRow) return json({ error: 'That code doesn\'t exist.' }, 404);
