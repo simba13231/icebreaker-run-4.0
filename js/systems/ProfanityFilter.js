@@ -23,7 +23,7 @@ const BLOCKLIST = [
   'whore', 'slut', 'bastard', 'twat', 'wanker', 'bollocks', 'douche',
   'motherfucker', 'nigger', 'nigga', 'faggot', 'fag', 'dyke', 'retard',
   'chink', 'spic', 'kike', 'gook', 'coon', 'tranny', 'rapist', 'nazi',
-  'niger', 'niga'
+  'niger', 'niga', 'nig', 'goon'
 ];
 
 function normalize(str) {
