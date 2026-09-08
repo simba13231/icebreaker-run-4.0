@@ -43,7 +43,7 @@ const BLOCKLIST = [
   'goon', 'gooner',
   'moron', 'idiot', 'imbecile', 'dumbass', 'dumbfuck',
   'loser', 'scumbag', 'shitbag', 'asswipe', 'asshat',
-  'crackhead', 'dipstick', 'dumbshit', 'fuckface',
+  'crackhead', 'dipstick', 'dumbshit', 'fuckface', 'wanker',
 ];
 
 function normalize(str) {
