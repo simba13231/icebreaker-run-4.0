@@ -38,7 +38,7 @@ const BLOCKLIST = [
   'faggot', 'fag', 'fags', 'dyke',
   'retard', 'retarded', 'tard',
   'chink', 'spic', 'kike', 'gook', 'coon', 'tranny',
-  'nigger', 'nigga', 'niger', 'niga', 'nig',
+  'nigger', 'nigga', 'niger', 'niga',
   'rapist', 'nazi',
   'goon', 'gooner',
   'moron', 'idiot', 'imbecile', 'dumbass', 'dumbfuck',
