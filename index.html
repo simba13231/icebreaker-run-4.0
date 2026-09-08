@@ -75,6 +75,7 @@
       <button id="btn-play" class="btn btn--primary btn--pulse">▶ PLAY</button>
       <button id="btn-boat-shop-open" class="btn btn--secondary">🚤 SHOP</button>
       <button id="btn-leaderboard-open" class="btn btn--secondary">🏆 LEADERBOARD</button>
+      <button id="btn-redeem-open" class="btn btn--secondary">🎁 REDEEM CODE</button>
       <button id="btn-settings-open" class="btn btn--secondary">⚙ SETTINGS</button>
     </div>
   </section>
@@ -329,6 +330,29 @@
       </div>
       <p id="leaderboard-status" class="subtitle hidden">Loading…</p>
       <div id="leaderboard-list" class="leaderboard-list"></div>
+    </div>
+  </section>
+
+  <!-- Redeem Code -->
+  <section id="screen-redeem" class="screen" aria-label="Redeem a code">
+    <div class="panel">
+      <h2 class="title title--sm">REDEEM CODE</h2>
+      <p class="subtitle">Got a code? Enter it below.</p>
+      <input
+        id="redeem-input"
+        class="text-input"
+        type="text"
+        maxlength="32"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="CODE"
+      />
+      <p id="redeem-error" class="field-error"></p>
+      <div class="button-stack">
+        <button id="btn-redeem-submit" class="btn btn--primary">REDEEM</button>
+        <button id="btn-redeem-back" class="btn btn--secondary">BACK</button>
+      </div>
     </div>
   </section>
 </div>

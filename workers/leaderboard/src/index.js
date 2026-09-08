@@ -1,34 +1,46 @@
-// index.js — Icebreaker Run global leaderboard Worker.
+// index.js — Icebreaker Run backend Worker. Routes:
 //
-// Routes:
-//   GET  /api/scores?limit=50   -> { scores: [{ name, score, created_at }, ...] }
-//   POST /api/scores            -> body { name, score } -> { ok: true, rank }
+//   Leaderboard (public)
+//     GET  /api/scores?limit=50
+//     POST /api/scores                 { name, score }
 //
-// Backed by a D1 database (binding: DB). See ../schema.sql for the table
-// definition and ../README.md for setup/deploy steps.
+//   Accounts (public — no password, username IS the account key; see README)
+//     POST /api/players/register       { username, initialState }
+//     GET  /api/players/:username/progress
+//     POST /api/players/:username/progress   { coins, boatsOwned, ... }
+//
+//   Codes (public redeem, admin-gated management)
+//     POST /api/codes/redeem           { username, code }
+//
+//   Admin (all require header X-Admin-Key: <ADMIN_KEY secret>)
+//     GET    /api/admin/players?search=
+//     POST   /api/admin/players/:username/grant   { coins?, boatId?, obstacleId? }
+//     POST   /api/admin/players/:username/reset   { clearScores? }
+//     GET    /api/admin/leaderboard?limit=
+//     DELETE /api/admin/leaderboard/:id
+//     GET    /api/admin/codes
+//     POST   /api/admin/codes          { code, coinsReward, itemType, itemId, maxUses, expiresAt }
+//     DELETE /api/admin/codes/:code
+//
+// Backed by a D1 database (binding: DB). See schema.sql + migrations/ for
+// the table definitions and README.md for setup/deploy steps.
 
-import { containsProfanity } from './profanity-list.js';
+import { json, corsHeaders, validateUsername } from './shared.js';
+import { handleRegister, handleGetProgress, handlePostProgress } from './players.js';
+import { handleRedeem } from './codes.js';
+import {
+  handleAdminListPlayers,
+  handleAdminGrant,
+  handleAdminReset,
+  handleAdminListScores,
+  handleAdminDeleteScore,
+  handleAdminListCodes,
+  handleAdminCreateCode,
+  handleAdminDeleteCode
+} from './admin.js';
 
-const MIN_NAME_LENGTH = 2;
-const MAX_NAME_LENGTH = 16;
-const NAME_PATTERN = /^[A-Za-z0-9 _-]+$/;
 const MAX_SCORE = 999999;
 const MIN_SUBMIT_INTERVAL_MS = 3000; // simple per-IP throttle against spam submissions
-
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
-  };
-}
-
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders() }
-  });
-}
 
 async function handleGetScores(url, env) {
   const requested = Number(url.searchParams.get('limit'));
@@ -51,18 +63,10 @@ async function handlePostScore(request, env) {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
-  const name = typeof body.name === 'string' ? body.name.trim().replace(/\s+/g, ' ') : '';
-  const score = Number(body.score);
+  const { name, error } = validateUsername(body.name);
+  if (error) return json({ error }, 400);
 
-  if (name.length < MIN_NAME_LENGTH || name.length > MAX_NAME_LENGTH) {
-    return json({ error: `Name must be ${MIN_NAME_LENGTH}-${MAX_NAME_LENGTH} characters.` }, 400);
-  }
-  if (!NAME_PATTERN.test(name)) {
-    return json({ error: 'Name contains invalid characters.' }, 400);
-  }
-  if (containsProfanity(name)) {
-    return json({ error: 'That name is not allowed.' }, 400);
-  }
+  const score = Number(body.score);
   if (!Number.isFinite(score) || !Number.isInteger(score) || score < 0 || score > MAX_SCORE) {
     return json({ error: 'Invalid score.' }, 400);
   }
@@ -70,8 +74,6 @@ async function handlePostScore(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
 
   // Basic anti-spam: reject if this IP submitted a score very recently.
-  // (Not airtight — IPs can be shared/rotated — but stops naive spam without
-  // needing an extra KV/Durable Object binding.)
   const recent = await env.DB.prepare(
     'SELECT created_at FROM scores WHERE ip = ? ORDER BY created_at DESC LIMIT 1'
   )
@@ -95,20 +97,58 @@ async function handlePostScore(request, env) {
   return json({ ok: true, rank });
 }
 
+function isAdminAuthorized(request, env) {
+  const key = request.headers.get('X-Admin-Key') || '';
+  return Boolean(env.ADMIN_KEY) && key === env.ADMIN_KEY;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const path = url.pathname;
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders() });
     }
 
-    if (url.pathname === '/api/scores' && request.method === 'GET') {
-      return handleGetScores(url, env);
-    }
+    // --- Public: leaderboard ---------------------------------------------
+    if (path === '/api/scores' && request.method === 'GET') return handleGetScores(url, env);
+    if (path === '/api/scores' && request.method === 'POST') return handlePostScore(request, env);
 
-    if (url.pathname === '/api/scores' && request.method === 'POST') {
-      return handlePostScore(request, env);
+    // --- Public: accounts --------------------------------------------------
+    if (path === '/api/players/register' && request.method === 'POST') return handleRegister(request, env);
+
+    const progressMatch = path.match(/^\/api\/players\/([^/]+)\/progress$/);
+    if (progressMatch && request.method === 'GET') return handleGetProgress(decodeURIComponent(progressMatch[1]), env);
+    if (progressMatch && request.method === 'POST') return handlePostProgress(decodeURIComponent(progressMatch[1]), request, env);
+
+    // --- Public: code redemption --------------------------------------------
+    if (path === '/api/codes/redeem' && request.method === 'POST') return handleRedeem(request, env);
+
+    // --- Admin (everything below requires X-Admin-Key) ---------------------
+    if (path.startsWith('/api/admin/')) {
+      if (!isAdminAuthorized(request, env)) return json({ error: 'Unauthorized.' }, 401);
+
+      if (path === '/api/admin/players' && request.method === 'GET') return handleAdminListPlayers(url, env);
+
+      const grantMatch = path.match(/^\/api\/admin\/players\/([^/]+)\/grant$/);
+      if (grantMatch && request.method === 'POST') return handleAdminGrant(decodeURIComponent(grantMatch[1]), request, env);
+
+      const resetMatch = path.match(/^\/api\/admin\/players\/([^/]+)\/reset$/);
+      if (resetMatch && request.method === 'POST') return handleAdminReset(decodeURIComponent(resetMatch[1]), request, env);
+
+      if (path === '/api/admin/leaderboard' && request.method === 'GET') return handleAdminListScores(url, env);
+
+      const deleteScoreMatch = path.match(/^\/api\/admin\/leaderboard\/(\d+)$/);
+      if (deleteScoreMatch && request.method === 'DELETE') return handleAdminDeleteScore(Number(deleteScoreMatch[1]), env);
+
+      if (path === '/api/admin/codes' && request.method === 'GET') return handleAdminListCodes(env);
+      if (path === '/api/admin/codes' && request.method === 'POST') return handleAdminCreateCode(request, env);
+
+      const deleteCodeMatch = path.match(/^\/api\/admin\/codes\/([^/]+)$/);
+      if (deleteCodeMatch && request.method === 'DELETE') return handleAdminDeleteCode(decodeURIComponent(deleteCodeMatch[1]), env);
+
+      return json({ error: 'Not found.' }, 404);
     }
 
     return json({ error: 'Not found.' }, 404);

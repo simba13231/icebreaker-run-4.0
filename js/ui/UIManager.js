@@ -28,6 +28,7 @@ export class UIManager {
       raceResults: document.getElementById('screen-race-results'),
       usernameScreen: document.getElementById('screen-username'),
       leaderboardScreen: document.getElementById('screen-leaderboard'),
+      redeemScreen: document.getElementById('screen-redeem'),
 
       menuCoins: document.getElementById('menu-coins'),
       menuHighScore: document.getElementById('menu-high-score'),
@@ -126,7 +127,13 @@ export class UIManager {
       btnLeaderboardOpen: document.getElementById('btn-leaderboard-open'),
       btnLeaderboardBack: document.getElementById('btn-leaderboard-back'),
       leaderboardList: document.getElementById('leaderboard-list'),
-      leaderboardStatus: document.getElementById('leaderboard-status')
+      leaderboardStatus: document.getElementById('leaderboard-status'),
+
+      btnRedeemOpen: document.getElementById('btn-redeem-open'),
+      btnRedeemBack: document.getElementById('btn-redeem-back'),
+      btnRedeemSubmit: document.getElementById('btn-redeem-submit'),
+      redeemInput: document.getElementById('redeem-input'),
+      redeemError: document.getElementById('redeem-error')
     };
 
     this._screens = [
@@ -142,13 +149,15 @@ export class UIManager {
       this.el.raceCountdown,
       this.el.raceResults,
       this.el.usernameScreen,
-      this.el.leaderboardScreen
+      this.el.leaderboardScreen,
+      this.el.redeemScreen
     ];
 
     this._levelSelectListeners = new Set();
     this._boatActionListeners = new Set();
     this._obstacleActionListeners = new Set();
     this._usernameSubmitListeners = new Set();
+    this._redeemSubmitListeners = new Set();
 
     this.el.btnShopTabBoats.addEventListener('click', () => this._setShopTab('boats'));
     this.el.btnShopTabObstacles.addEventListener('click', () => this._setShopTab('obstacles'));
@@ -158,6 +167,11 @@ export class UIManager {
     );
     this.el.usernameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this._emitUsernameSubmit(this.el.usernameInput.value);
+    });
+
+    this.el.btnRedeemSubmit.addEventListener('click', () => this._emitRedeemSubmit(this.el.redeemInput.value));
+    this.el.redeemInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this._emitRedeemSubmit(this.el.redeemInput.value);
     });
 
     this._initModeCarousel();
@@ -234,6 +248,13 @@ export class UIManager {
       case States.LEADERBOARD:
         this._hideAllScreens();
         this.el.leaderboardScreen.classList.add('visible');
+        break;
+      case States.REDEEM:
+        this._hideAllScreens();
+        this.el.redeemScreen.classList.add('visible');
+        this.el.redeemInput.value = '';
+        this.el.redeemError.textContent = '';
+        setTimeout(() => this.el.redeemInput.focus(), 50);
         break;
       case States.MODE_SELECT:
         this._hideAllScreens();
@@ -432,6 +453,21 @@ export class UIManager {
   /** Shows a validation error under the username field (empty string clears it). */
   showUsernameError(message) {
     this.el.usernameError.textContent = message || '';
+  }
+
+  // --- Redeem code -----------------------------------------------------------
+
+  onRedeemSubmit(listener) {
+    this._redeemSubmitListeners.add(listener);
+    return () => this._redeemSubmitListeners.delete(listener);
+  }
+
+  _emitRedeemSubmit(rawValue) {
+    for (const l of this._redeemSubmitListeners) l(rawValue);
+  }
+
+  showRedeemError(message) {
+    this.el.redeemError.textContent = message || '';
   }
 
   // --- Leaderboard ---------------------------------------------------------------

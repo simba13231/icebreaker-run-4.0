@@ -36,6 +36,7 @@ import { AdProvider } from '../systems/AdProvider.js';
 import { PowerUpManager } from '../systems/PowerUpManager.js';
 import { RaceManager } from '../systems/RaceManager.js';
 import { validateUsername } from '../systems/ProfanityFilter.js';
+import { AccountSync } from '../systems/AccountSync.js';
 
 import { Renderer } from '../rendering/Renderer.js';
 import { UIManager } from '../ui/UIManager.js';
@@ -67,6 +68,7 @@ export class Game {
     this.storage = new StorageManager();
     this.leaderboard = new LocalLeaderboardService(this.storage);
     this.cloudLeaderboard = new CloudLeaderboardService(CONFIG.LEADERBOARD.API_BASE_URL);
+    this.accountSync = new AccountSync(CONFIG.LEADERBOARD.API_BASE_URL);
     this.progression = new Progression(this.storage);
     this.adProvider = new AdProvider();
 
@@ -119,11 +121,13 @@ export class Game {
     this._resetEntities();
 
     this.state.onChange((state) => this._onStateChange(state));
-    if (this.storage.getUsername()) {
+    const existingUsername = this.storage.getUsername();
+    if (existingUsername) {
       this.ui.showForState(States.MENU, {
         highScore: this.leaderboard.getHighScore(),
         coins: this.progression.coins
       });
+      this._syncAccountOnLoad(existingUsername);
     } else {
       // First launch (or storage was cleared) — ask for a leaderboard name
       // before showing the main menu at all.
@@ -172,6 +176,9 @@ export class Game {
     this.ui.onUsernameSubmit((rawValue) => this._handleUsernameSubmit(rawValue));
     this.ui.el.btnLeaderboardOpen.addEventListener('click', () => this._openLeaderboard());
     this.ui.el.btnLeaderboardBack.addEventListener('click', () => this._backToMenu());
+    this.ui.el.btnRedeemOpen.addEventListener('click', () => this._openRedeem());
+    this.ui.el.btnRedeemBack.addEventListener('click', () => this._backToMenu());
+    this.ui.onRedeemSubmit((rawValue) => this._handleRedeemSubmit(rawValue));
 
     // Level complete
     this.ui.el.btnNextLevel.addEventListener('click', () =>
@@ -328,10 +335,12 @@ export class Game {
       if (purchased) {
         this.audio.click();
         this.ui.flashPurchased();
+        this._pushProgressToServer();
       }
     } else if (action === 'equip') {
       this.progression.equipBoat(boatId);
       this.audio.click();
+      this._pushProgressToServer();
     }
     this.ui.renderBoatGrid(this.progression);
   }
@@ -342,6 +351,7 @@ export class Game {
       if (purchased) {
         this.audio.click();
         this.ui.flashPurchased();
+        this._pushProgressToServer();
       }
     }
     this.ui.renderObstacleGrid(this.progression);
@@ -370,6 +380,79 @@ export class Game {
       highScore: this.leaderboard.getHighScore(),
       coins: this.progression.coins
     });
+    this._syncAccountOnLoad(result.cleaned);
+  }
+
+  /**
+   * Registers/reconciles this device's username as a server-side account,
+   * seeded with whatever local progress already exists (so upgrading
+   * players don't lose anything). If the server already had a different
+   * snapshot for this username (e.g. an admin grant/reset that landed
+   * before this device ever checked in), that snapshot wins and overwrites
+   * local storage. Best-effort — failures are silent, local play is
+   * unaffected either way.
+   */
+  async _syncAccountOnLoad(username) {
+    if (!this.accountSync.isConfigured) return;
+    try {
+      const player = await this.accountSync.register(username, this.storage.getProgressSnapshot());
+      if (player) {
+        this.storage.applyProgressSnapshot(player);
+        this.progression = new Progression(this.storage);
+        // Refresh whichever screen is currently showing so an admin grant
+        // that just landed shows up immediately rather than after a reload.
+        if (this.state.is(States.MENU)) {
+          this.ui.showForState(States.MENU, {
+            highScore: this.leaderboard.getHighScore(),
+            coins: this.progression.coins
+          });
+        }
+      }
+    } catch (err) {
+      // Offline or Worker unreachable — local progress just stays as-is.
+    }
+  }
+
+  /** Best-effort push of current local progress up to the server. Never blocks gameplay. */
+  _pushProgressToServer() {
+    const username = this.storage.getUsername();
+    if (!username || !this.accountSync.isConfigured) return;
+    this.accountSync.pushProgress(username, this.storage.getProgressSnapshot()).catch(() => {});
+  }
+
+  async _openRedeem() {
+    this.audio.click();
+    this.state.set(States.REDEEM);
+    this.ui.showForState(States.REDEEM);
+  }
+
+  async _handleRedeemSubmit(rawCode) {
+    const code = (rawCode || '').trim();
+    if (!code) {
+      this.ui.showRedeemError('Enter a code first.');
+      return;
+    }
+    const username = this.storage.getUsername();
+    if (!username) {
+      this.ui.showRedeemError('Something went wrong — try reopening the game.');
+      return;
+    }
+
+    this.ui.el.btnRedeemSubmit.disabled = true;
+    const result = await this.accountSync.redeemCode(username, code);
+    this.ui.el.btnRedeemSubmit.disabled = false;
+
+    if (!result.ok) {
+      this.ui.showRedeemError(result.error);
+      return;
+    }
+
+    if (result.player) {
+      this.storage.applyProgressSnapshot(result.player);
+      this.progression = new Progression(this.storage);
+    }
+    this.audio.click();
+    this._backToMenu();
   }
 
   async _openLeaderboard() {
@@ -528,6 +611,7 @@ export class Game {
     if (username && this.cloudLeaderboard.isConfigured) {
       this.cloudLeaderboard.submitScore(username, this.scoreManager.displayScore).catch(() => {});
     }
+    this._pushProgressToServer(); // syncs coins earned this run (and any level unlocks) to the account
     const canRevive =
       (this.mode === 'endless' || this.mode === 'level') &&
       this.scoreManager.displayScore < CONFIG.REVIVE.SCORE_CAP;
@@ -570,6 +654,7 @@ export class Game {
 
     const { coinsAwarded } = this.progression.completeLevel(this.currentLevel);
     const hasNextLevel = this.currentLevel < CONFIG.LEVELS.COUNT;
+    this._pushProgressToServer();
 
     this.state.set(States.LEVEL_COMPLETE);
     this.ui.showForState(States.LEVEL_COMPLETE, {
@@ -629,6 +714,7 @@ export class Game {
     if (this.progression.spendCoins(CONFIG.SURVIVAL.REPAIR_COST_COINS)) {
       this.survivalHealth = CONFIG.SURVIVAL.MAX_HEALTH;
       this.audio.click();
+      this._pushProgressToServer();
     }
     this._closeCheckpoint();
   }
@@ -649,6 +735,7 @@ export class Game {
     this.audio.stopMusic();
     const coinsAwarded = this.raceManager.getReward(rank);
     this.progression.addCoins(coinsAwarded);
+    this._pushProgressToServer();
 
     this.state.set(States.RACE_RESULTS);
     this.ui.showForState(States.RACE_RESULTS, {

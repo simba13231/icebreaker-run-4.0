@@ -152,6 +152,31 @@ export class StorageManager {
   setUsername(name) {
     return this._set(CONFIG.STORAGE.USERNAME_KEY, name);
   }
+
+  // --- Progress snapshot (for server sync) -----------------------------------
+
+  /** Everything the server-side account needs to mirror this device's progress. */
+  getProgressSnapshot() {
+    return {
+      coins: this.getCoins(),
+      boatsOwned: this.getOwnedBoats(),
+      boatEquipped: this.getEquippedBoat(),
+      obstaclesOwned: this.getOwnedObstacles(),
+      levelsUnlocked: this.getUnlockedLevel(),
+      levelsCompleted: this.getCompletedLevels()
+    };
+  }
+
+  /** Applies a snapshot pulled from the server (e.g. after an admin grant/reset). */
+  applyProgressSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    if (typeof snapshot.coins === 'number') this.setCoins(snapshot.coins);
+    if (Array.isArray(snapshot.boatsOwned)) this.setOwnedBoats(snapshot.boatsOwned);
+    if (typeof snapshot.boatEquipped === 'string') this.setEquippedBoat(snapshot.boatEquipped);
+    if (Array.isArray(snapshot.obstaclesOwned)) this.setOwnedObstacles(snapshot.obstaclesOwned);
+    if (typeof snapshot.levelsUnlocked === 'number') this.setUnlockedLevel(snapshot.levelsUnlocked);
+    if (Array.isArray(snapshot.levelsCompleted)) this.setCompletedLevels(snapshot.levelsCompleted);
+  }
 }
 
 /**

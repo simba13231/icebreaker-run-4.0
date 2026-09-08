@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Icebreaker Run — Admin</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e1620;
+    --panel: #16212e;
+    --border: #2a3a4a;
+    --text: #e7eef5;
+    --text-dim: #93a4b5;
+    --accent: #4fc3f7;
+    --danger: #ff5d6c;
+    --ok: #52d17a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .sub { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 20px; }
+  .gate {
+    max-width: 360px;
+    margin: 80px auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+  }
+  input, select, button {
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+  input, select {
+    background: #0c141c;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  button {
+    background: var(--accent);
+    color: #04222f;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button.danger { background: var(--danger); color: #250406; }
+  button.secondary { background: #2a3a4a; color: var(--text); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    color: var(--text-dim);
+  }
+  .tab.active { background: var(--accent); color: #04222f; border-color: var(--accent); font-weight: 700; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .panel.active { display: block; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-dim); font-weight: 600; }
+  .status { font-size: 0.85rem; color: var(--text-dim); min-height: 1.2em; margin-top: 8px; }
+  .status.error { color: var(--danger); }
+  .status.ok { color: var(--ok); }
+  .mini-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .mini-form input { width: 80px; }
+  .pill { font-size: 0.72rem; color: var(--text-dim); }
+  h2 { font-size: 1rem; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <h1>🔒 Admin Access</h1>
+  <p class="sub">Icebreaker Run</p>
+  <input id="admin-key-input" type="password" placeholder="Admin key" style="width:100%; margin-bottom: 10px;" />
+  <button id="btn-unlock" style="width:100%;">Unlock</button>
+  <p id="gate-status" class="status"></p>
+</div>
+
+<div id="app" style="display:none; max-width: 900px; margin: 0 auto;">
+  <h1>Icebreaker Run — Admin</h1>
+  <p class="sub">Worker: <code id="worker-url-label"></code></p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="players">Players</div>
+    <div class="tab" data-tab="codes">Codes</div>
+    <div class="tab" data-tab="leaderboard">Leaderboard</div>
+  </div>
+
+  <!-- Players -->
+  <div class="panel active" id="panel-players">
+    <h2>Grant to a username directly</h2>
+    <p class="sub" style="margin-top:-8px;">Works even if they've never opened the game — the grant will be waiting for them.</p>
+    <div class="row mini-form">
+      <input id="grant-username" type="text" placeholder="username" />
+      <input id="grant-coins" type="number" placeholder="coins" />
+      <input id="grant-boat" type="text" placeholder="boat id (optional)" />
+      <input id="grant-obstacle" type="text" placeholder="obstacle id (optional)" />
+      <button id="btn-grant-direct">Grant</button>
+    </div>
+    <p id="grant-status" class="status"></p>
+
+    <h2 style="margin-top: 24px;">Search players</h2>
+    <div class="row">
+      <input id="player-search" type="text" placeholder="search username…" />
+      <button id="btn-player-search">Search</button>
+      <button class="secondary" id="btn-player-refresh">Show recent</button>
+    </div>
+    <div id="players-table-wrap"></div>
+    <p id="players-status" class="status"></p>
+  </div>
+
+  <!-- Codes -->
+  <div class="panel" id="panel-codes">
+    <h2>Create a code</h2>
+    <div class="row mini-form">
+      <input id="code-code" type="text" placeholder="CODE" style="width:140px; text-transform:uppercase;" />
+      <input id="code-coins" type="number" placeholder="coins reward" />
+      <select id="code-item-type">
+        <option value="">No item</option>
+        <option value="boat">Boat</option>
+        <option value="obstacle">Obstacle</option>
+      </select>
+      <input id="code-item-id" type="text" placeholder="item id" style="width:120px;" />
+      <input id="code-max-uses" type="number" placeholder="max uses (blank=∞)" style="width:150px;" />
+      <input id="code-expires" type="date" />
+      <button id="btn-create-code">Create</button>
+    </div>
+    <p id="code-create-status" class="status"></p>
+
+    <h2 style="margin-top: 24px;">Existing codes</h2>
+    <button class="secondary" id="btn-codes-refresh">Refresh</button>
+    <div id="codes-table-wrap" style="margin-top:12px;"></div>
+    <p id="codes-status" class="status"></p>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="panel" id="panel-leaderboard">
+    <h2>Leaderboard moderation</h2>
+    <button class="secondary" id="btn-leaderboard-refresh">Refresh</button>
+    <div id="leaderboard-table-wrap" style="margin-top:12px;"></div>
+    <p id="leaderboard-status" class="status"></p>
+  </div>
+</div>
+
+<script>
+// Same Worker as the game itself — update if you ever redeploy under a
+// different name/URL.
+const API_BASE_URL = 'https://icebreaker-leaderboard.hartayk30.workers.dev';
+document.getElementById('worker-url-label').textContent = API_BASE_URL;
+
+let adminKey = sessionStorage.getItem('icebreakerAdminKey') || '';
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = String(str ?? '');
+  return div.innerHTML;
+}
+
+async function adminFetch(path, options = {}) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Key': adminKey,
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401) {
+    sessionStorage.removeItem('icebreakerAdminKey');
+    showGate('Wrong key — try again.');
+    throw new Error('Unauthorized');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+function showGate(message) {
+  document.getElementById('gate').style.display = 'block';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('gate-status').textContent = message || '';
+  document.getElementById('gate-status').className = message ? 'status error' : 'status';
+}
+
+function showApp() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+async function tryUnlock() {
+  const key = document.getElementById('admin-key-input').value.trim();
+  if (!key) return;
+  adminKey = key;
+  try {
+    // Any lightweight admin GET proves the key works.
+    await adminFetch('/api/admin/codes');
+    sessionStorage.setItem('icebreakerAdminKey', key);
+    showApp();
+    refreshPlayers();
+    refreshCodes();
+    refreshLeaderboard();
+  } catch (err) {
+    // showGate already called by adminFetch on 401; handle other failures too.
+    if (err.message !== 'Unauthorized') showGate(err.message);
+  }
+}
+
+document.getElementById('btn-unlock').addEventListener('click', tryUnlock);
+document.getElementById('admin-key-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') tryUnlock();
+});
+
+// --- Tabs --------------------------------------------------------------------
+
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+// --- Players -------------------------------------------------------------------
+
+function renderPlayersTable(players) {
+  const wrap = document.getElementById('players-table-wrap');
+  if (!players || players.length === 0) {
+    wrap.innerHTML = '<p class="sub">No players found.</p>';
+    return;
+  }
+  const rows = players.map((p) => `
+    <tr>
+      <td>${escapeHtml(p.username)}</td>
+      <td>${p.coins}</td>
+      <td>${escapeHtml((p.boatsOwned || []).join(', '))}</td>
+      <td>${escapeHtml((p.obstaclesOwned || []).join(', '))}</td>
+      <td>${escapeHtml(p.boatEquipped)}</td>
+      <td class="pill">${escapeHtml(p.updatedAt || '')}</td>
+      <td><button class="danger" data-reset="${escapeHtml(p.username)}">Reset</button></td>
+    </tr>
+  `).join('');
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>Username</th><th>Coins</th><th>Boats</th><th>Obstacles</th><th>Equipped</th><th>Updated</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+  wrap.querySelectorAll('[data-reset]').forEach((btn) => {
+    btn.addEventListener('click', () => resetPlayer(btn.dataset.reset));
+  });
+}
+
+async function refreshPlayers(search) {
+  const status = document.getElementById('players-status');
+  status.textContent = 'Loading…';
+  status.className = 'status';
+  try {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    const data = await adminFetch(`/api/admin/players${query}`);
+    renderPlayersTable(data.players);
+    status.textContent = '';
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'status error';
+  }
+}
+
+document.getElementById('btn-player-search').addEventListener('click', () => {
+  refreshPlayers(document.getElementById('player-search').value.trim());
+});
+document.getElementById('btn-player-refresh').addEventListener('click', () => refreshPlayers());
+
+async function resetPlayer(username) {
+  if (!confirm(`Reset ${username}'s coins, boats, obstacles, levels, and leaderboard scores back to defaults?`)) return;
+  try {
+    await adminFetch(`/api/admin/players/${encodeURIComponent(username)}/reset`, {
+      method: 'POST',
+      body: JSON.stringify({ clearScores: true })
+    });
+    refreshPlayers(document.getElementById('player-search').value.trim());
+    refreshLeaderboard();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+document.getElementById('btn-grant-direct').addEventListener('click', async () => {
+  const username = document.getElementById('grant-username').value.trim();
+  const status = document.getElementById('grant-status');
+  if (!username) {
+    status.textContent = 'Enter a username first.';
+    status.className = 'status error';
+    return;
+  }
+  const coins = document.getElementById('grant-coins').value;
+  const boatId = document.getElementById('grant-boat').value.trim();
+  const obstacleId = document.getElementById('grant-obstacle').value.trim();
+
+  status.textContent = 'Granting…';
+  status.className = 'status';
+  try {
+    await adminFetch(`/api/admin/players/${encodeURIComponent(username)}/grant`, {
+      method: 'POST',
+      body: JSON.stringify({
+        coins: coins ? Number(coins) : 0,
+        boatId: boatId || undefined,
+        obstacleId: obstacleId || undefined
+      })
+    });
+    status.textContent = `Granted to ${username}.`;
+    status.className = 'status ok';
+    document.getElementById('grant-coins').value = '';
+    document.getElementById('grant-boat').value = '';
+    document.getElementById('grant-obstacle').value = '';
+    refreshPlayers(document.getElementById('player-search').value.trim());
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'status error';
+  }
+});
+
+// --- Codes -------------------------------------------------------------------
+
+function renderCodesTable(codes) {
+  const wrap = document.getElementById('codes-table-wrap');
+  if (!codes || codes.length === 0) {
+    wrap.innerHTML = '<p class="sub">No codes yet.</p>';
+    return;
+  }
+  const rows = codes.map((c) => `
+    <tr>
+      <td>${escapeHtml(c.code)}</td>
+      <td>${c.coins_reward}</td>
+      <td>${c.item_type ? `${escapeHtml(c.item_type)}: ${escapeHtml(c.item_id || '')}` : '—'}</td>
+      <td>${c.used_count}${c.max_uses !== null ? ` / ${c.max_uses}` : ' / ∞'}</td>
+      <td class="pill">${escapeHtml(c.expires_at || 'never')}</td>
+      <td><button class="danger" data-delete-code="${escapeHtml(c.code)}">Delete</button></td>
+    </tr>
+  `).join('');
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>Code</th><th>Coins</th><th>Item</th><th>Uses</th><th>Expires</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+  wrap.querySelectorAll('[data-delete-code]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteCode(btn.dataset.deleteCode));
+  });
+}
+
+async function refreshCodes() {
+  const status = document.getElementById('codes-status');
+  status.textContent = 'Loading…';
+  status.className = 'status';
+  try {
+    const data = await adminFetch('/api/admin/codes');
+    renderCodesTable(data.codes);
+    status.textContent = '';
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'status error';
+  }
+}
+
+document.getElementById('btn-codes-refresh').addEventListener('click', refreshCodes);
+
+document.getElementById('btn-create-code').addEventListener('click', async () => {
+  const status = document.getElementById('code-create-status');
+  const code = document.getElementById('code-code').value.trim().toUpperCase();
+  const coinsReward = document.getElementById('code-coins').value;
+  const itemType = document.getElementById('code-item-type').value || null;
+  const itemId = document.getElementById('code-item-id').value.trim() || null;
+  const maxUsesRaw = document.getElementById('code-max-uses').value;
+  const expiresAt = document.getElementById('code-expires').value || null;
+
+  if (!code) {
+    status.textContent = 'Enter a code.';
+    status.className = 'status error';
+    return;
+  }
+
+  status.textContent = 'Creating…';
+  status.className = 'status';
+  try {
+    await adminFetch('/api/admin/codes', {
+      method: 'POST',
+      body: JSON.stringify({
+        code,
+        coinsReward: coinsReward ? Number(coinsReward) : 0,
+        itemType,
+        itemId,
+        maxUses: maxUsesRaw === '' ? null : Number(maxUsesRaw),
+        expiresAt
+      })
+    });
+    status.textContent = `Created ${code}.`;
+    status.className = 'status ok';
+    document.getElementById('code-code').value = '';
+    document.getElementById('code-coins').value = '';
+    document.getElementById('code-item-id').value = '';
+    document.getElementById('code-max-uses').value = '';
+    document.getElementById('code-expires').value = '';
+    refreshCodes();
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'status error';
+  }
+});
+
+async function deleteCode(code) {
+  if (!confirm(`Delete code ${code}? This can't be undone.`)) return;
+  try {
+    await adminFetch(`/api/admin/codes/${encodeURIComponent(code)}`, { method: 'DELETE' });
+    refreshCodes();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// --- Leaderboard ---------------------------------------------------------------
+
+function renderLeaderboardTable(scores) {
+  const wrap = document.getElementById('leaderboard-table-wrap');
+  if (!scores || scores.length === 0) {
+    wrap.innerHTML = '<p class="sub">No scores yet.</p>';
+    return;
+  }
+  const rows = scores.map((s, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(s.name)}</td>
+      <td>${s.score}</td>
+      <td class="pill">${escapeHtml(s.created_at || '')}</td>
+      <td><button class="danger" data-delete-score="${s.id}">Delete</button></td>
+    </tr>
+  `).join('');
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>#</th><th>Name</th><th>Score</th><th>Created</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+  wrap.querySelectorAll('[data-delete-score]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteScore(btn.dataset.deleteScore));
+  });
+}
+
+async function refreshLeaderboard() {
+  const status = document.getElementById('leaderboard-status');
+  status.textContent = 'Loading…';
+  status.className = 'status';
+  try {
+    const data = await adminFetch('/api/admin/leaderboard?limit=200');
+    renderLeaderboardTable(data.scores);
+    status.textContent = '';
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'status error';
+  }
+}
+
+document.getElementById('btn-leaderboard-refresh').addEventListener('click', refreshLeaderboard);
+
+async function deleteScore(id) {
+  if (!confirm('Delete this leaderboard entry?')) return;
+  try {
+    await adminFetch(`/api/admin/leaderboard/${id}`, { method: 'DELETE' });
+    refreshLeaderboard();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// --- Boot ------------------------------------------------------------------------
+
+if (adminKey) {
+  showApp();
+  refreshPlayers();
+  refreshCodes();
+  refreshLeaderboard();
+} else {
+  showGate();
+}
+</script>
+</body>
+</html>
