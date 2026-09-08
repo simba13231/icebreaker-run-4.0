@@ -4,166 +4,314 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Icebreaker Run — Admin</title>
+<title>Harbor Control — Icebreaker Run</title>
 <style>
   :root {
     color-scheme: dark;
-    --bg: #0e1620;
-    --panel: #16212e;
-    --border: #2a3a4a;
-    --text: #e7eef5;
-    --text-dim: #93a4b5;
-    --accent: #4fc3f7;
-    --danger: #ff5d6c;
-    --ok: #52d17a;
+    --bg: #0a1420;
+    --panel: #0f1e2c;
+    --panel-raised: #132537;
+    --border: #1f3446;
+    --text: #dbe7f0;
+    --text-dim: #71889b;
+    --accent: #49d3e0;
+    --accent-dim: #2a5a63;
+    --warn: #ff8a5c;
+    --ok: #3ddc84;
+    --font-ui: -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-data: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
   }
   * { box-sizing: border-box; }
-  body {
+  html, body {
     margin: 0;
-    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    height: 100%;
     background: var(--bg);
     color: var(--text);
-    padding: 20px;
+    font-family: var(--font-ui);
   }
-  h1 { font-size: 1.3rem; margin: 0 0 4px; }
-  .sub { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 20px; }
+  code, .mono { font-family: var(--font-data); }
+
+  /* --- Gate --- */
+  .gate-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(73, 211, 224, 0.08), transparent 40%),
+      var(--bg);
+  }
   .gate {
-    max-width: 360px;
-    margin: 80px auto;
+    width: 320px;
+    padding: 32px 28px;
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    text-align: center;
+    border-radius: 4px;
+    border-top: 2px solid var(--accent);
   }
-  input, select, button {
-    font-family: inherit;
+  .gate-eyebrow {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin: 0 0 4px;
+  }
+  .gate h1 {
+    font-size: 1.15rem;
+    margin: 0 0 20px;
+    font-weight: 600;
+  }
+  .gate input {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+  .gate button { width: 100%; }
+
+  /* --- Shell layout --- */
+  .shell { display: none; min-height: 100vh; }
+  .shell.visible { display: flex; }
+
+  .sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .brand {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .brand-eyebrow {
+    font-family: var(--font-data);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin: 0 0 2px;
+  }
+  .brand h1 {
+    font-size: 1rem;
+    margin: 0;
+    font-weight: 600;
+  }
+  .nav-item {
+    padding: 11px 20px;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-left: 2px solid transparent;
     font-size: 0.9rem;
   }
+  .nav-item:hover { color: var(--text); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(73, 211, 224, 0.06);
+  }
+  .worker-url {
+    margin-top: auto;
+    padding: 12px 20px 0;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-data);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    word-break: break-all;
+  }
+
+  .main { flex: 1; padding: 28px 36px; max-width: 900px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .view-header { margin-bottom: 20px; }
+  .view-header h2 { font-size: 1.05rem; margin: 0 0 4px; font-weight: 600; }
+  .view-header p { margin: 0; color: var(--text-dim); font-size: 0.85rem; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .card h3 {
+    font-size: 0.78rem;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    color: var(--text-dim);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+
+  /* --- Form controls --- */
+  input, select, button {
+    font-family: inherit;
+    font-size: 0.88rem;
+  }
   input, select {
-    background: #0c141c;
+    background: var(--bg);
     border: 1px solid var(--border);
     color: var(--text);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 8px 10px;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
   }
   button {
     background: var(--accent);
-    color: #04222f;
+    color: #04222a;
     border: none;
-    border-radius: 6px;
-    padding: 8px 14px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  button.danger { background: var(--danger); color: #250406; }
-  button.secondary { background: #2a3a4a; color: var(--text); }
-  button:disabled { opacity: 0.5; cursor: default; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-  .tab {
+    border-radius: 3px;
     padding: 8px 16px;
-    border-radius: 8px;
-    background: var(--panel);
-    border: 1px solid var(--border);
+    font-weight: 600;
     cursor: pointer;
-    color: var(--text-dim);
   }
-  .tab.active { background: var(--accent); color: #04222f; border-color: var(--accent); font-weight: 700; }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 16px;
-    display: none;
-  }
-  .panel.active { display: block; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  th { color: var(--text-dim); font-weight: 600; }
-  .status { font-size: 0.85rem; color: var(--text-dim); min-height: 1.2em; margin-top: 8px; }
-  .status.error { color: var(--danger); }
+  button:hover { filter: brightness(1.08); }
+  button.danger { background: var(--warn); color: #2a0e02; }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button:disabled { opacity: 0.45; cursor: default; }
+
+  .form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .form-row input, .form-row select { flex: 1; min-width: 100px; }
+  .form-row input[data-w="sm"] { flex: 0 0 90px; min-width: 90px; }
+  .form-row input[data-w="code"] { flex: 0 0 140px; min-width: 140px; text-transform: uppercase; }
+
+  .status { font-size: 0.82rem; color: var(--text-dim); min-height: 1.2em; margin: 10px 0 0; }
+  .status.error { color: var(--warn); }
   .status.ok { color: var(--ok); }
-  .mini-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-  .mini-form input { width: 80px; }
-  .pill { font-size: 0.72rem; color: var(--text-dim); }
-  h2 { font-size: 1rem; margin: 0 0 12px; }
+
+  /* --- Data table (console-log style) --- */
+  table { width: 100%; border-collapse: collapse; font-family: var(--font-data); font-size: 0.82rem; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th {
+    color: var(--text-dim);
+    font-weight: 500;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+  }
+  tr:hover td { background: rgba(255, 255, 255, 0.015); }
+  .rank-1 { color: #ffd166; }
+  .rank-2 { color: #cfd8dc; }
+  .rank-3 { color: #d8a37a; }
+  .empty-note { color: var(--text-dim); font-size: 0.85rem; margin: 0; }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
 </style>
 </head>
 <body>
 
-<div id="gate" class="gate">
-  <h1>🔒 Admin Access</h1>
-  <p class="sub">Icebreaker Run</p>
-  <input id="admin-key-input" type="password" placeholder="Admin key" style="width:100%; margin-bottom: 10px;" />
-  <button id="btn-unlock" style="width:100%;">Unlock</button>
-  <p id="gate-status" class="status"></p>
+<div id="gate-wrap" class="gate-wrap">
+  <div class="gate">
+    <p class="gate-eyebrow">RESTRICTED</p>
+    <h1>Harbor Control</h1>
+    <input id="admin-key-input" type="password" placeholder="Admin key" />
+    <button id="btn-unlock" style="width:100%;">Unlock</button>
+    <p id="gate-status" class="status"></p>
+  </div>
 </div>
 
-<div id="app" style="display:none; max-width: 900px; margin: 0 auto;">
-  <h1>Icebreaker Run — Admin</h1>
-  <p class="sub">Worker: <code id="worker-url-label"></code></p>
-
-  <div class="tabs">
-    <div class="tab active" data-tab="players">Players</div>
-    <div class="tab" data-tab="codes">Codes</div>
-    <div class="tab" data-tab="leaderboard">Leaderboard</div>
+<div id="shell" class="shell">
+  <div class="sidebar">
+    <div class="brand">
+      <p class="brand-eyebrow">HARBOR CONTROL</p>
+      <h1>Icebreaker Run</h1>
+    </div>
+    <div class="nav-item tab active" data-tab="players">Players</div>
+    <div class="nav-item tab" data-tab="codes">Codes</div>
+    <div class="nav-item tab" data-tab="leaderboard">Leaderboard</div>
+    <div id="worker-url-label" class="worker-url"></div>
   </div>
 
-  <!-- Players -->
-  <div class="panel active" id="panel-players">
-    <h2>Grant to a username directly</h2>
-    <p class="sub" style="margin-top:-8px;">Works even if they've never opened the game — the grant will be waiting for them.</p>
-    <div class="row mini-form">
-      <input id="grant-username" type="text" placeholder="username" />
-      <input id="grant-coins" type="number" placeholder="coins" />
-      <input id="grant-boat" type="text" placeholder="boat id (optional)" />
-      <input id="grant-obstacle" type="text" placeholder="obstacle id (optional)" />
-      <button id="btn-grant-direct">Grant</button>
+  <div class="main">
+    <!-- Players -->
+    <div class="view active" id="panel-players">
+      <div class="view-header">
+        <h2>Players</h2>
+        <p>Grant coins/items directly, or reset an account back to defaults.</p>
+      </div>
+
+      <div class="card">
+        <h3>Grant to a username</h3>
+        <div class="form-row">
+          <input id="grant-username" type="text" placeholder="username" />
+          <input id="grant-coins" type="number" placeholder="coins" data-w="sm" />
+          <input id="grant-boat" type="text" placeholder="boat id" />
+          <input id="grant-obstacle" type="text" placeholder="obstacle id" />
+          <button id="btn-grant-direct">Grant</button>
+        </div>
+        <p class="empty-note" style="margin-top:10px;">Works even if they've never opened the game — the grant waits for them.</p>
+        <p id="grant-status" class="status"></p>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h3 style="margin:0;">Registered players</h3>
+          <div style="flex:1;"></div>
+          <input id="player-search" type="text" placeholder="search username…" style="width:180px;" />
+          <button id="btn-player-search">Search</button>
+          <button class="secondary" id="btn-player-refresh">Recent</button>
+        </div>
+        <div id="players-table-wrap"></div>
+        <p id="players-status" class="status"></p>
+      </div>
     </div>
-    <p id="grant-status" class="status"></p>
 
-    <h2 style="margin-top: 24px;">Search players</h2>
-    <div class="row">
-      <input id="player-search" type="text" placeholder="search username…" />
-      <button id="btn-player-search">Search</button>
-      <button class="secondary" id="btn-player-refresh">Show recent</button>
+    <!-- Codes -->
+    <div class="view" id="panel-codes">
+      <div class="view-header">
+        <h2>Redeem codes</h2>
+        <p>Create limited or unlimited codes players can enter in-game.</p>
+      </div>
+
+      <div class="card">
+        <h3>New code</h3>
+        <div class="form-row">
+          <input id="code-code" type="text" placeholder="CODE" data-w="code" />
+          <input id="code-coins" type="number" placeholder="coins" data-w="sm" />
+          <select id="code-item-type">
+            <option value="">No item</option>
+            <option value="boat">Boat</option>
+            <option value="obstacle">Obstacle</option>
+          </select>
+          <input id="code-item-id" type="text" placeholder="item id" />
+          <input id="code-max-uses" type="number" placeholder="max uses (∞)" data-w="sm" />
+          <input id="code-expires" type="date" />
+          <button id="btn-create-code">Create</button>
+        </div>
+        <p id="code-create-status" class="status"></p>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h3 style="margin:0;">Active codes</h3>
+          <div style="flex:1;"></div>
+          <button class="secondary" id="btn-codes-refresh">Refresh</button>
+        </div>
+        <div id="codes-table-wrap"></div>
+        <p id="codes-status" class="status"></p>
+      </div>
     </div>
-    <div id="players-table-wrap"></div>
-    <p id="players-status" class="status"></p>
-  </div>
 
-  <!-- Codes -->
-  <div class="panel" id="panel-codes">
-    <h2>Create a code</h2>
-    <div class="row mini-form">
-      <input id="code-code" type="text" placeholder="CODE" style="width:140px; text-transform:uppercase;" />
-      <input id="code-coins" type="number" placeholder="coins reward" />
-      <select id="code-item-type">
-        <option value="">No item</option>
-        <option value="boat">Boat</option>
-        <option value="obstacle">Obstacle</option>
-      </select>
-      <input id="code-item-id" type="text" placeholder="item id" style="width:120px;" />
-      <input id="code-max-uses" type="number" placeholder="max uses (blank=∞)" style="width:150px;" />
-      <input id="code-expires" type="date" />
-      <button id="btn-create-code">Create</button>
+    <!-- Leaderboard -->
+    <div class="view" id="panel-leaderboard">
+      <div class="view-header">
+        <h2>Leaderboard</h2>
+        <p>Remove entries that shouldn't be there.</p>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h3 style="margin:0;">Top scores</h3>
+          <div style="flex:1;"></div>
+          <button class="secondary" id="btn-leaderboard-refresh">Refresh</button>
+        </div>
+        <div id="leaderboard-table-wrap"></div>
+        <p id="leaderboard-status" class="status"></p>
+      </div>
     </div>
-    <p id="code-create-status" class="status"></p>
-
-    <h2 style="margin-top: 24px;">Existing codes</h2>
-    <button class="secondary" id="btn-codes-refresh">Refresh</button>
-    <div id="codes-table-wrap" style="margin-top:12px;"></div>
-    <p id="codes-status" class="status"></p>
-  </div>
-
-  <!-- Leaderboard -->
-  <div class="panel" id="panel-leaderboard">
-    <h2>Leaderboard moderation</h2>
-    <button class="secondary" id="btn-leaderboard-refresh">Refresh</button>
-    <div id="leaderboard-table-wrap" style="margin-top:12px;"></div>
-    <p id="leaderboard-status" class="status"></p>
   </div>
 </div>
 
@@ -201,15 +349,15 @@ async function adminFetch(path, options = {}) {
 }
 
 function showGate(message) {
-  document.getElementById('gate').style.display = 'block';
-  document.getElementById('app').style.display = 'none';
+  document.getElementById('gate-wrap').style.display = 'flex';
+  document.getElementById('shell').classList.remove('visible');
   document.getElementById('gate-status').textContent = message || '';
   document.getElementById('gate-status').className = message ? 'status error' : 'status';
 }
 
 function showApp() {
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+  document.getElementById('gate-wrap').style.display = 'none';
+  document.getElementById('shell').classList.add('visible');
 }
 
 async function tryUnlock() {
@@ -235,12 +383,12 @@ document.getElementById('admin-key-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') tryUnlock();
 });
 
-// --- Tabs --------------------------------------------------------------------
+// --- Nav / views ---------------------------------------------------------------
 
 document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
+    document.querySelectorAll('.view').forEach((p) => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
   });
@@ -251,7 +399,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
 function renderPlayersTable(players) {
   const wrap = document.getElementById('players-table-wrap');
   if (!players || players.length === 0) {
-    wrap.innerHTML = '<p class="sub">No players found.</p>';
+    wrap.innerHTML = '<p class="empty-note">No players found.</p>';
     return;
   }
   const rows = players.map((p) => `
@@ -261,7 +409,7 @@ function renderPlayersTable(players) {
       <td>${escapeHtml((p.boatsOwned || []).join(', '))}</td>
       <td>${escapeHtml((p.obstaclesOwned || []).join(', '))}</td>
       <td>${escapeHtml(p.boatEquipped)}</td>
-      <td class="pill">${escapeHtml(p.updatedAt || '')}</td>
+      <td>${escapeHtml(p.updatedAt || '')}</td>
       <td><button class="danger" data-reset="${escapeHtml(p.username)}">Reset</button></td>
     </tr>
   `).join('');
@@ -350,7 +498,7 @@ document.getElementById('btn-grant-direct').addEventListener('click', async () =
 function renderCodesTable(codes) {
   const wrap = document.getElementById('codes-table-wrap');
   if (!codes || codes.length === 0) {
-    wrap.innerHTML = '<p class="sub">No codes yet.</p>';
+    wrap.innerHTML = '<p class="empty-note">No codes yet.</p>';
     return;
   }
   const rows = codes.map((c) => `
@@ -359,7 +507,7 @@ function renderCodesTable(codes) {
       <td>${c.coins_reward}</td>
       <td>${c.item_type ? `${escapeHtml(c.item_type)}: ${escapeHtml(c.item_id || '')}` : '—'}</td>
       <td>${c.used_count}${c.max_uses !== null ? ` / ${c.max_uses}` : ' / ∞'}</td>
-      <td class="pill">${escapeHtml(c.expires_at || 'never')}</td>
+      <td>${escapeHtml(c.expires_at || 'never')}</td>
       <td><button class="danger" data-delete-code="${escapeHtml(c.code)}">Delete</button></td>
     </tr>
   `).join('');
@@ -448,15 +596,16 @@ async function deleteCode(code) {
 function renderLeaderboardTable(scores) {
   const wrap = document.getElementById('leaderboard-table-wrap');
   if (!scores || scores.length === 0) {
-    wrap.innerHTML = '<p class="sub">No scores yet.</p>';
+    wrap.innerHTML = '<p class="empty-note">No scores yet.</p>';
     return;
   }
+  const rankClass = (i) => (i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '');
   const rows = scores.map((s, i) => `
     <tr>
-      <td>${i + 1}</td>
+      <td class="${rankClass(i)}">${i + 1}</td>
       <td>${escapeHtml(s.name)}</td>
       <td>${s.score}</td>
-      <td class="pill">${escapeHtml(s.created_at || '')}</td>
+      <td>${escapeHtml(s.created_at || '')}</td>
       <td><button class="danger" data-delete-score="${s.id}">Delete</button></td>
     </tr>
   `).join('');
