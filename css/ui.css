@@ -460,8 +460,9 @@
 }
 
 .boat-card-swatch {
+  display: block;
   width: 100%;
-  height: 54px;
+  height: 92px;
   border-radius: var(--radius-sm);
   border: 2px solid;
 }

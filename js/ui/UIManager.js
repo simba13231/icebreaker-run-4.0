@@ -10,6 +10,7 @@ import { CONFIG } from '../config.js';
 import { BOATS } from '../data/Boats.js';
 import { OBSTACLES } from '../data/Obstacles.js';
 import { getAllLevelNumbers } from '../data/Levels.js';
+import { drawBoatPreview } from '../rendering/BoatPreview.js';
 
 export class UIManager {
   constructor() {
@@ -604,9 +605,8 @@ export class UIManager {
       card.className = 'boat-card';
       card.classList.toggle('boat-card--equipped', equipped);
 
-      const swatch = document.createElement('div');
+      const swatch = document.createElement('canvas');
       swatch.className = 'boat-card-swatch';
-      swatch.style.background = `linear-gradient(180deg, ${boat.colors.hull}, ${boat.colors.hullShade})`;
       swatch.style.borderColor = boat.colors.cabin;
       card.appendChild(swatch);
 
@@ -647,6 +647,7 @@ export class UIManager {
 
       card.appendChild(actionRow);
       grid.appendChild(card);
+      drawBoatPreview(swatch, boat);
     }
   }
 
