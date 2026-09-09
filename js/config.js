@@ -126,7 +126,13 @@ export const CONFIG = {
 
   SCORE: {
     POINTS_PER_SECOND: 10,
-    POINTS_PER_100PX_DISTANCE: 1
+    POINTS_PER_100PX_DISTANCE: 1,
+    // Near-miss combo: awarded when a hazard that was in the player's lane
+    // at spawn time passes by without hitting them (i.e. they dodged a real
+    // threat, not just an obstacle that was never in their way).
+    NEAR_MISS_BASE_BONUS: 15,
+    NEAR_MISS_STREAK_BONUS_STEP: 0.15, // +15% bonus per streak level
+    NEAR_MISS_STREAK_CAP: 10 // streak multiplier stops growing past this
   },
 
   // --- Progression / meta-game -------------------------------------------
@@ -164,7 +170,8 @@ export const CONFIG = {
     LEVELS_UNLOCKED_KEY: 'icebreakerRun.levelsUnlocked',
     LEVELS_COMPLETED_KEY: 'icebreakerRun.levelsCompleted',
     OBSTACLES_OWNED_KEY: 'icebreakerRun.obstaclesOwned',
-    USERNAME_KEY: 'icebreakerRun.username'
+    USERNAME_KEY: 'icebreakerRun.username',
+    USERNAME_PIN_KEY: 'icebreakerRun.usernamePin'
   },
 
   // Global leaderboard, backed by a Cloudflare Worker + D1 (see

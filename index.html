@@ -207,6 +207,7 @@
       <div class="button-stack">
         <button id="btn-watch-ad-revive" class="btn btn--revive hidden">📺 WATCH AD — REVIVE</button>
         <button id="btn-play-again" class="btn btn--primary">↻ RETRY</button>
+        <button id="btn-share-score" class="btn btn--secondary">📤 SHARE SCORE</button>
         <button id="btn-gameover-main-menu" class="btn btn--secondary">MAIN MENU</button>
       </div>
     </div>
@@ -318,6 +319,18 @@
         spellcheck="false"
         placeholder="Your name"
       />
+      <input
+        id="username-pin-input"
+        class="text-input"
+        type="tel"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="4"
+        autocomplete="off"
+        placeholder="4-digit PIN"
+        style="margin-top: 8px;"
+      />
+      <p class="subtitle" style="font-size: 0.7rem; margin-top: 4px;">Protects your name so no one else can use it.</p>
       <p id="username-error" class="field-error"></p>
       <div class="button-stack">
         <button id="btn-username-submit" class="btn btn--primary">CONTINUE ▶</button>

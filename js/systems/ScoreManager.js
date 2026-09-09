@@ -28,6 +28,11 @@ export class ScoreManager {
     }
   }
 
+  /** For one-off bonuses (near-miss combo, etc.) — keeps score mutation centralized here. */
+  addBonus(points) {
+    this.score += points;
+  }
+
   get displayScore() {
     return Math.floor(this.score);
   }

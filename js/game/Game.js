@@ -106,6 +106,7 @@ export class Game {
     this._raceFinished = false;
     this._raceCountdownMsRemaining = 0;
     this._racePenaltyMsRemaining = 0;
+    this._nearMissStreak = 0;
 
     // Coin pickup spawn timing (shared across all run modes).
     this._coinTimeSinceSpawnMs = 0;
@@ -173,7 +174,7 @@ export class Game {
     this.ui.onObstacleAction((action, obstacleId) => this._handleObstacleAction(action, obstacleId));
 
     // Username entry (first launch) + global leaderboard
-    this.ui.onUsernameSubmit((rawValue) => this._handleUsernameSubmit(rawValue));
+    this.ui.onUsernameSubmit((rawValue, rawPin) => this._handleUsernameSubmit(rawValue, rawPin));
     this.ui.el.btnLeaderboardOpen.addEventListener('click', () => this._openLeaderboard());
     this.ui.el.btnLeaderboardBack.addEventListener('click', () => this._backToMenu());
     this.ui.el.btnRedeemOpen.addEventListener('click', () => this._openRedeem());
@@ -191,6 +192,7 @@ export class Game {
       this._startRun(this.mode, this.currentLevel)
     );
     this.ui.el.btnWatchAdRevive.addEventListener('click', () => this._handleWatchAdRevive());
+    this.ui.el.btnShareScore.addEventListener('click', () => this._shareScore());
 
     // Boat ability
     this.ui.el.btnAbility.addEventListener('click', () => this._handleAbilityActivate());
@@ -287,6 +289,7 @@ export class Game {
     // Race Mode reset.
     this._raceFinished = false;
     this._racePenaltyMsRemaining = 0;
+    this._nearMissStreak = 0;
     if (this.mode === 'race') {
       this.raceManager.setup(this.lanePositions);
     }
@@ -367,35 +370,62 @@ export class Game {
     });
   }
 
-  _handleUsernameSubmit(rawValue) {
+  async _handleUsernameSubmit(rawValue, rawPin) {
     const result = validateUsername(rawValue);
     if (!result.valid) {
       this.ui.showUsernameError(result.error);
       return;
     }
+    const pin = (rawPin || '').trim();
+    if (!/^\d{4}$/.test(pin)) {
+      this.ui.showUsernameError('Enter a 4-digit PIN.');
+      return;
+    }
+
+    this.ui.el.btnUsernameSubmit.disabled = true;
+    this.ui.showUsernameError('');
+
+    let player = null;
+    if (this.accountSync.isConfigured) {
+      try {
+        player = await this.accountSync.register(result.cleaned, pin, this.storage.getProgressSnapshot());
+      } catch (err) {
+        this.ui.el.btnUsernameSubmit.disabled = false;
+        this.ui.showUsernameError(err.message || 'That name is taken — try a different one.');
+        return;
+      }
+    }
+
+    // Only commit locally once the server (if configured) has confirmed
+    // this name+PIN combination is actually usable.
     this.storage.setUsername(result.cleaned);
+    this.storage.setPin(pin);
+    if (player) {
+      this.storage.applyProgressSnapshot(player);
+      this.progression = new Progression(this.storage);
+    }
+
+    this.ui.el.btnUsernameSubmit.disabled = false;
     this.audio.click();
     this.state.set(States.MENU);
     this.ui.showForState(States.MENU, {
       highScore: this.leaderboard.getHighScore(),
       coins: this.progression.coins
     });
-    this._syncAccountOnLoad(result.cleaned);
   }
 
   /**
-   * Registers/reconciles this device's username as a server-side account,
-   * seeded with whatever local progress already exists (so upgrading
-   * players don't lose anything). If the server already had a different
-   * snapshot for this username (e.g. an admin grant/reset that landed
-   * before this device ever checked in), that snapshot wins and overwrites
-   * local storage. Best-effort — failures are silent, local play is
-   * unaffected either way.
+   * Re-confirms this device's already-registered username on every load,
+   * using its saved PIN so the server knows it's the same device — not a
+   * new signup. If the server has a different snapshot for this username
+   * (e.g. an admin grant/reset that landed before this device checked in),
+   * that snapshot wins and overwrites local storage. Best-effort — failures
+   * are silent, local play is unaffected either way.
    */
   async _syncAccountOnLoad(username) {
     if (!this.accountSync.isConfigured) return;
     try {
-      const player = await this.accountSync.register(username, this.storage.getProgressSnapshot());
+      const player = await this.accountSync.register(username, this.storage.getPin(), this.storage.getProgressSnapshot());
       if (player) {
         this.storage.applyProgressSnapshot(player);
         this.progression = new Progression(this.storage);
@@ -409,7 +439,8 @@ export class Game {
         }
       }
     } catch (err) {
-      // Offline or Worker unreachable — local progress just stays as-is.
+      // Offline, Worker unreachable, or (very rare) a PIN mismatch — local
+      // progress just stays as-is either way.
     }
   }
 
@@ -648,6 +679,37 @@ export class Game {
     if (this.settings.musicEnabled) this.audio.startMusic();
   }
 
+  async _shareScore() {
+    const score = ScoreManager.format(this.scoreManager.displayScore);
+    const text = `I scored ${score} in Icebreaker Run! 🧊🚤 Can you beat it?`;
+    const url = window.location.origin + window.location.pathname;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Icebreaker Run', text, url });
+      } catch (err) {
+        // Cancelled or unsupported mid-flow — no error state needed, the
+        // person just closed the share sheet.
+      }
+      return;
+    }
+
+    // No Web Share API (most desktop browsers) — fall back to clipboard,
+    // with a brief label change as the only feedback needed for a copy action.
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      const btn = this.ui.el.btnShareScore;
+      const original = btn.textContent;
+      btn.textContent = '✅ COPIED!';
+      setTimeout(() => {
+        btn.textContent = original;
+      }, 1500);
+    } catch (err) {
+      // Clipboard blocked (permissions, insecure context, etc.) — nothing
+      // more to do; sharing just silently isn't available here.
+    }
+  }
+
   _levelComplete() {
     this.audio.levelComplete();
     this.audio.stopMusic();
@@ -815,12 +877,36 @@ export class Game {
           allowBoats
         );
         this.hazards.push(...newHazards);
+        // Tag each hazard with the boat's lane at spawn time — used below to
+        // detect a genuine near-miss (a hazard that threatened the player's
+        // actual lane, which they then dodged) vs. one that was never a
+        // threat because the boat was already elsewhere.
+        for (const h of newHazards) h._boatLaneAtSpawn = this.boat.laneIndex;
         if (this.mode === 'race') this.raceManager.notifyNewRow(blockedLanes);
       });
 
       for (const hazard of this.hazards) {
         hazard.update(deltaSec, this.difficulty.speed);
       }
+
+      // --- Near-miss combo: award before filtering out offscreen hazards ---
+      // (a hazard that reaches offscreen without being markedForRemoval by a
+      // collision either never threatened the player, or was successfully
+      // dodged — only the latter, tagged at spawn, counts).
+      for (const hazard of this.hazards) {
+        if (hazard.markedForRemoval || !hazard.isOffscreen(this.renderer.height)) continue;
+        if (hazard._boatLaneAtSpawn === hazard.laneIndex && !hazard._nearMissAwarded) {
+          hazard._nearMissAwarded = true;
+          this._nearMissStreak = (this._nearMissStreak || 0) + 1;
+          const cappedStreak = Math.min(this._nearMissStreak - 1, CONFIG.SCORE.NEAR_MISS_STREAK_CAP);
+          const bonus = Math.round(
+            CONFIG.SCORE.NEAR_MISS_BASE_BONUS * (1 + cappedStreak * CONFIG.SCORE.NEAR_MISS_STREAK_BONUS_STEP)
+          );
+          this.scoreManager.addBonus(bonus);
+          this.renderer.effects.emitDodge(this.boat.x, this.boat.y);
+        }
+      }
+
       this.hazards = this.hazards.filter(
         (h) => !h.markedForRemoval && !h.isOffscreen(this.renderer.height)
       );
@@ -909,15 +995,18 @@ export class Game {
           this.renderer.effects.emitDodge(this.boat.x, this.boat.y);
         } else if (this.mode === 'survival') {
           hit.markedForRemoval = true;
+          this._nearMissStreak = 0;
           if (this._survivalInvulnMsRemaining <= 0) {
             this._survivalTakeHit(hit);
           }
         } else if (this.mode === 'race') {
           hit.markedForRemoval = true;
+          this._nearMissStreak = 0;
           this._racePenaltyMsRemaining = CONFIG.RACE.COLLISION_PENALTY_MS;
           this.audio.collision();
           this.renderer.effects.emitCollision(this.boat.x, this.boat.y);
         } else {
+          this._nearMissStreak = 0;
           this._gameOver();
         }
       }

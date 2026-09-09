@@ -103,6 +103,7 @@ export class UIManager {
       btnResume: document.getElementById('btn-resume'),
       btnPauseMainMenu: document.getElementById('btn-pause-main-menu'),
       btnPlayAgain: document.getElementById('btn-play-again'),
+      btnShareScore: document.getElementById('btn-share-score'),
       btnGameOverMainMenu: document.getElementById('btn-gameover-main-menu'),
       btnMute: document.getElementById('btn-mute'),
 
@@ -121,6 +122,7 @@ export class UIManager {
       btnModeNext: document.getElementById('btn-mode-next'),
 
       usernameInput: document.getElementById('username-input'),
+      usernamePinInput: document.getElementById('username-pin-input'),
       usernameError: document.getElementById('username-error'),
       btnUsernameSubmit: document.getElementById('btn-username-submit'),
 
@@ -163,10 +165,13 @@ export class UIManager {
     this.el.btnShopTabObstacles.addEventListener('click', () => this._setShopTab('obstacles'));
 
     this.el.btnUsernameSubmit.addEventListener('click', () =>
-      this._emitUsernameSubmit(this.el.usernameInput.value)
+      this._emitUsernameSubmit(this.el.usernameInput.value, this.el.usernamePinInput.value)
     );
     this.el.usernameInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this._emitUsernameSubmit(this.el.usernameInput.value);
+      if (e.key === 'Enter') this._emitUsernameSubmit(this.el.usernameInput.value, this.el.usernamePinInput.value);
+    });
+    this.el.usernamePinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this._emitUsernameSubmit(this.el.usernameInput.value, this.el.usernamePinInput.value);
     });
 
     this.el.btnRedeemSubmit.addEventListener('click', () => this._emitRedeemSubmit(this.el.redeemInput.value));
@@ -242,6 +247,7 @@ export class UIManager {
         this._hideAllScreens();
         this.el.usernameScreen.classList.add('visible');
         this.el.usernameInput.value = '';
+        this.el.usernamePinInput.value = '';
         this.el.usernameError.textContent = '';
         setTimeout(() => this.el.usernameInput.focus(), 50);
         break;
@@ -446,8 +452,8 @@ export class UIManager {
     return () => this._usernameSubmitListeners.delete(listener);
   }
 
-  _emitUsernameSubmit(rawValue) {
-    for (const l of this._usernameSubmitListeners) l(rawValue);
+  _emitUsernameSubmit(rawValue, rawPin) {
+    for (const l of this._usernameSubmitListeners) l(rawValue, rawPin);
   }
 
   /** Shows a validation error under the username field (empty string clears it). */
