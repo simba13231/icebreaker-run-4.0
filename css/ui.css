@@ -876,20 +876,23 @@
 
 .shop-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
   margin-bottom: 4px;
 }
 
 .shop-tab {
-  flex: 1;
-  padding: 10px 8px;
+  flex: 1 1 45%;
+  min-width: 0;
+  padding: 9px 6px;
   border-radius: var(--radius-sm);
   background: #eef8fd;
   color: var(--color-text-secondary);
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
   box-shadow: inset 0 0 0 2px transparent;
   transition: background var(--transition-fast), color var(--transition-fast);
 }

@@ -7,6 +7,8 @@
 import { CONFIG } from '../config.js';
 import { BOATS } from '../data/Boats.js';
 import { OBSTACLES } from '../data/Obstacles.js';
+import { ICEBERG_SKINS } from '../data/IcebergSkins.js';
+import { BACKGROUNDS } from '../data/Backgrounds.js';
 
 export class Progression {
   constructor(storageManager) {
@@ -17,6 +19,10 @@ export class Progression {
     this.unlockedLevel = this.storage.getUnlockedLevel();
     this.completedLevels = this.storage.getCompletedLevels();
     this.ownedObstacles = this.storage.getOwnedObstacles();
+    this.ownedIcebergSkins = this.storage.getOwnedIcebergSkins();
+    this.equippedIcebergSkinId = this.storage.getEquippedIcebergSkin();
+    this.ownedBackgrounds = this.storage.getOwnedBackgrounds();
+    this.equippedBackgroundId = this.storage.getEquippedBackground();
   }
 
   // --- Coins ---------------------------------------------------------------
@@ -107,5 +113,57 @@ export class Progression {
   /** Returns the full obstacle defs the player currently owns (always includes 'iceberg'). */
   getUnlockedObstacleDefs() {
     return OBSTACLES.filter((o) => this.ownsObstacle(o.id));
+  }
+
+  // --- Iceberg skins (cosmetic) ------------------------------------------------
+
+  ownsIcebergSkin(id) {
+    return this.ownedIcebergSkins.includes(id);
+  }
+
+  purchaseIcebergSkin(id) {
+    const skin = ICEBERG_SKINS.find((s) => s.id === id);
+    if (!skin || this.ownsIcebergSkin(id)) return false;
+    if (!this.spendCoins(skin.price)) return false;
+    this.ownedIcebergSkins = [...this.ownedIcebergSkins, id];
+    this.storage.setOwnedIcebergSkins(this.ownedIcebergSkins);
+    return true;
+  }
+
+  equipIcebergSkin(id) {
+    if (!this.ownsIcebergSkin(id)) return false;
+    this.equippedIcebergSkinId = id;
+    this.storage.setEquippedIcebergSkin(id);
+    return true;
+  }
+
+  getEquippedIcebergSkinDef() {
+    return ICEBERG_SKINS.find((s) => s.id === this.equippedIcebergSkinId) || ICEBERG_SKINS[0];
+  }
+
+  // --- Backgrounds (cosmetic) ---------------------------------------------------
+
+  ownsBackground(id) {
+    return this.ownedBackgrounds.includes(id);
+  }
+
+  purchaseBackground(id) {
+    const bg = BACKGROUNDS.find((b) => b.id === id);
+    if (!bg || this.ownsBackground(id)) return false;
+    if (!this.spendCoins(bg.price)) return false;
+    this.ownedBackgrounds = [...this.ownedBackgrounds, id];
+    this.storage.setOwnedBackgrounds(this.ownedBackgrounds);
+    return true;
+  }
+
+  equipBackground(id) {
+    if (!this.ownsBackground(id)) return false;
+    this.equippedBackgroundId = id;
+    this.storage.setEquippedBackground(id);
+    return true;
+  }
+
+  getEquippedBackgroundDef() {
+    return BACKGROUNDS.find((b) => b.id === this.equippedBackgroundId) || BACKGROUNDS[0];
   }
 }

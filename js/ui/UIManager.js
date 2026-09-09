@@ -11,6 +11,9 @@ import { BOATS } from '../data/Boats.js';
 import { OBSTACLES } from '../data/Obstacles.js';
 import { getAllLevelNumbers } from '../data/Levels.js';
 import { drawBoatPreview } from '../rendering/BoatPreview.js';
+import { drawIcebergSkinPreview } from '../rendering/IcebergSkinPreview.js';
+import { ICEBERG_SKINS } from '../data/IcebergSkins.js';
+import { BACKGROUNDS } from '../data/Backgrounds.js';
 
 export class UIManager {
   constructor() {
@@ -72,8 +75,12 @@ export class UIManager {
       shopCoins: document.getElementById('shop-coins'),
       boatGrid: document.getElementById('boat-grid'),
       obstacleGrid: document.getElementById('obstacle-grid'),
+      icebergSkinGrid: document.getElementById('iceberg-skin-grid'),
+      backgroundGrid: document.getElementById('background-grid'),
       btnShopTabBoats: document.getElementById('btn-shop-tab-boats'),
       btnShopTabObstacles: document.getElementById('btn-shop-tab-obstacles'),
+      btnShopTabIcebergSkins: document.getElementById('btn-shop-tab-iceberg-skins'),
+      btnShopTabBackgrounds: document.getElementById('btn-shop-tab-backgrounds'),
 
       checkpointHealthFill: document.getElementById('checkpoint-health-fill'),
       checkpointHealthLabel: document.getElementById('checkpoint-health-label'),
@@ -158,12 +165,16 @@ export class UIManager {
 
     this._levelSelectListeners = new Set();
     this._boatActionListeners = new Set();
+    this._icebergSkinActionListeners = new Set();
+    this._backgroundActionListeners = new Set();
     this._obstacleActionListeners = new Set();
     this._usernameSubmitListeners = new Set();
     this._redeemSubmitListeners = new Set();
 
     this.el.btnShopTabBoats.addEventListener('click', () => this._setShopTab('boats'));
     this.el.btnShopTabObstacles.addEventListener('click', () => this._setShopTab('obstacles'));
+    this.el.btnShopTabIcebergSkins.addEventListener('click', () => this._setShopTab('icebergSkins'));
+    this.el.btnShopTabBackgrounds.addEventListener('click', () => this._setShopTab('backgrounds'));
 
     this.el.btnUsernameSubmit.addEventListener('click', () =>
       this._emitUsernameSubmit(this.el.usernameInput.value, this.el.usernamePinInput.value)
@@ -575,8 +586,12 @@ export class UIManager {
     this._activeShopTab = tab;
     this.el.btnShopTabBoats.classList.toggle('shop-tab--active', tab === 'boats');
     this.el.btnShopTabObstacles.classList.toggle('shop-tab--active', tab === 'obstacles');
+    this.el.btnShopTabIcebergSkins.classList.toggle('shop-tab--active', tab === 'icebergSkins');
+    this.el.btnShopTabBackgrounds.classList.toggle('shop-tab--active', tab === 'backgrounds');
     this.el.boatGrid.classList.toggle('hidden', tab !== 'boats');
     this.el.obstacleGrid.classList.toggle('hidden', tab !== 'obstacles');
+    this.el.icebergSkinGrid.classList.toggle('hidden', tab !== 'icebergSkins');
+    this.el.backgroundGrid.classList.toggle('hidden', tab !== 'backgrounds');
   }
 
   // --- Boat shop grid ---------------------------------------------------------
@@ -651,14 +666,155 @@ export class UIManager {
     }
   }
 
-  /** Brief "PURCHASED!" flash on a boat card region (called after a successful purchase). */
+  /** Brief "PURCHASED!" flash over whichever shop grid is currently visible. */
   flashPurchased() {
-    const grid = this.el.boatGrid.classList.contains('hidden') ? this.el.obstacleGrid : this.el.boatGrid;
+    const grids = [this.el.boatGrid, this.el.obstacleGrid, this.el.icebergSkinGrid, this.el.backgroundGrid];
+    const grid = grids.find((g) => !g.classList.contains('hidden')) || this.el.boatGrid;
     const flash = document.createElement('div');
     flash.className = 'purchase-flash';
     flash.textContent = 'PURCHASED!';
     grid.parentElement.appendChild(flash);
     setTimeout(() => flash.remove(), 900);
+  }
+
+  // --- Iceberg skin shop grid --------------------------------------------------
+
+  onIcebergSkinAction(listener) {
+    this._icebergSkinActionListeners.add(listener);
+    return () => this._icebergSkinActionListeners.delete(listener);
+  }
+
+  _emitIcebergSkinAction(action, skinId) {
+    for (const l of this._icebergSkinActionListeners) l(action, skinId);
+  }
+
+  renderIcebergSkinGrid(progression) {
+    const grid = this.el.icebergSkinGrid;
+    grid.innerHTML = '';
+    this.el.shopCoins.textContent = String(progression.coins);
+
+    for (const skin of ICEBERG_SKINS) {
+      const owned = progression.ownsIcebergSkin(skin.id);
+      const equipped = progression.equippedIcebergSkinId === skin.id;
+      const canAfford = progression.coins >= skin.price;
+
+      const card = document.createElement('div');
+      card.className = 'boat-card';
+      card.classList.toggle('boat-card--equipped', equipped);
+
+      const swatch = document.createElement('canvas');
+      swatch.className = 'boat-card-swatch';
+      swatch.style.borderColor = skin.colors.dark;
+      card.appendChild(swatch);
+
+      const name = document.createElement('div');
+      name.className = 'boat-card-name';
+      name.textContent = skin.name;
+      card.appendChild(name);
+
+      const desc = document.createElement('div');
+      desc.className = 'boat-card-ability';
+      desc.textContent = skin.description || '';
+      card.appendChild(desc);
+
+      const actionRow = document.createElement('div');
+      actionRow.className = 'boat-card-action';
+
+      if (equipped) {
+        const badge = document.createElement('span');
+        badge.className = 'boat-card-equipped-badge';
+        badge.textContent = '✓ EQUIPPED';
+        actionRow.appendChild(badge);
+      } else if (owned) {
+        const equipBtn = document.createElement('button');
+        equipBtn.className = 'btn btn--secondary btn--card';
+        equipBtn.textContent = 'EQUIP';
+        equipBtn.addEventListener('click', () => this._emitIcebergSkinAction('equip', skin.id));
+        actionRow.appendChild(equipBtn);
+      } else {
+        const buyBtn = document.createElement('button');
+        buyBtn.className = 'btn btn--primary btn--card';
+        buyBtn.disabled = !canAfford;
+        buyBtn.textContent = skin.price === 0 ? 'FREE' : `${skin.price} 🪙`;
+        buyBtn.addEventListener('click', () => this._emitIcebergSkinAction('purchase', skin.id));
+        actionRow.appendChild(buyBtn);
+      }
+
+      card.appendChild(actionRow);
+      grid.appendChild(card);
+      drawIcebergSkinPreview(swatch, skin);
+    }
+  }
+
+  // --- Background shop grid ----------------------------------------------------
+
+  onBackgroundAction(listener) {
+    this._backgroundActionListeners.add(listener);
+    return () => this._backgroundActionListeners.delete(listener);
+  }
+
+  _emitBackgroundAction(action, backgroundId) {
+    for (const l of this._backgroundActionListeners) l(action, backgroundId);
+  }
+
+  renderBackgroundGrid(progression) {
+    const grid = this.el.backgroundGrid;
+    grid.innerHTML = '';
+    this.el.shopCoins.textContent = String(progression.coins);
+
+    for (const bg of BACKGROUNDS) {
+      const owned = progression.ownsBackground(bg.id);
+      const equipped = progression.equippedBackgroundId === bg.id;
+      const canAfford = progression.coins >= bg.price;
+
+      const card = document.createElement('div');
+      card.className = 'boat-card';
+      card.classList.toggle('boat-card--equipped', equipped);
+
+      // Simple CSS gradient swatch — matches the 3-stop vertical gradient
+      // OceanRenderer paints exactly, no canvas needed for a flat gradient.
+      const swatch = document.createElement('div');
+      swatch.className = 'boat-card-swatch';
+      swatch.style.background = `linear-gradient(180deg, ${bg.colors.deep}, ${bg.colors.mid} 55%, ${bg.colors.light})`;
+      swatch.style.borderColor = bg.colors.light;
+      card.appendChild(swatch);
+
+      const name = document.createElement('div');
+      name.className = 'boat-card-name';
+      name.textContent = bg.name;
+      card.appendChild(name);
+
+      const desc = document.createElement('div');
+      desc.className = 'boat-card-ability';
+      desc.textContent = bg.description || '';
+      card.appendChild(desc);
+
+      const actionRow = document.createElement('div');
+      actionRow.className = 'boat-card-action';
+
+      if (equipped) {
+        const badge = document.createElement('span');
+        badge.className = 'boat-card-equipped-badge';
+        badge.textContent = '✓ EQUIPPED';
+        actionRow.appendChild(badge);
+      } else if (owned) {
+        const equipBtn = document.createElement('button');
+        equipBtn.className = 'btn btn--secondary btn--card';
+        equipBtn.textContent = 'EQUIP';
+        equipBtn.addEventListener('click', () => this._emitBackgroundAction('equip', bg.id));
+        actionRow.appendChild(equipBtn);
+      } else {
+        const buyBtn = document.createElement('button');
+        buyBtn.className = 'btn btn--primary btn--card';
+        buyBtn.disabled = !canAfford;
+        buyBtn.textContent = bg.price === 0 ? 'FREE' : `${bg.price} 🪙`;
+        buyBtn.addEventListener('click', () => this._emitBackgroundAction('purchase', bg.id));
+        actionRow.appendChild(buyBtn);
+      }
+
+      card.appendChild(actionRow);
+      grid.appendChild(card);
+    }
   }
 
   // --- Obstacle shop grid ------------------------------------------------------

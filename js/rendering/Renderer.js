@@ -20,6 +20,12 @@ export class Renderer {
     this.height = 0;
     this.dpr = 1;
     this._clockSec = 0;
+    this.icebergSkinColors = null; // set via setIcebergSkin(); falls back to CONFIG.COLORS if never called
+  }
+
+  /** Swaps the iceberg gradient colors for an equipped skin. */
+  setIcebergSkin(colors) {
+    this.icebergSkinColors = colors;
   }
 
   resize(cssWidth, cssHeight) {
@@ -147,6 +153,7 @@ export class Renderer {
   renderIceberg(iceberg) {
     const ctx = this.ctx;
     const c = CONFIG.COLORS;
+    const skin = this.icebergSkinColors || { light: c.ICE_LIGHT, mid: c.ICE_MID, dark: c.ICE_DARK };
     ctx.save();
     ctx.translate(iceberg.x, iceberg.y);
     ctx.rotate(toRad(iceberg.rotation));
@@ -160,9 +167,9 @@ export class Renderer {
     ctx.closePath();
 
     const grad = ctx.createLinearGradient(0, -iceberg.height / 2, 0, iceberg.height / 2);
-    grad.addColorStop(0, c.ICE_LIGHT);
-    grad.addColorStop(0.5 + iceberg.shadeSeed * 0.2, c.ICE_MID);
-    grad.addColorStop(1, c.ICE_DARK);
+    grad.addColorStop(0, skin.light);
+    grad.addColorStop(0.5 + iceberg.shadeSeed * 0.2, skin.mid);
+    grad.addColorStop(1, skin.dark);
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.strokeStyle = 'rgba(11, 61, 92, 0.4)';

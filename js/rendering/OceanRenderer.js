@@ -4,10 +4,24 @@
 
 import { CONFIG } from '../config.js';
 
+function hexToRgba(hex, alpha) {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export class OceanRenderer {
   constructor() {
     this.scrollY = 0;
     this.streaks = [];
+    this.palette = null; // set via setPalette(); falls back to CONFIG.COLORS if never called
+  }
+
+  /** Swaps the water/streak/foam colors for an equipped background skin. */
+  setPalette(colors) {
+    this.palette = colors;
   }
 
   init(width, height) {
@@ -37,12 +51,19 @@ export class OceanRenderer {
 
   render(ctx, width, height, lanePositions, laneWidth) {
     const c = CONFIG.COLORS;
+    const p = this.palette || {
+      deep: c.OCEAN_DEEP,
+      mid: c.OCEAN_MID,
+      light: c.OCEAN_LIGHT,
+      streak: c.WATER_HIGHLIGHT_1,
+      foam: c.WATER_HIGHLIGHT_2
+    };
 
     // Base gradient — deep icy ocean.
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, c.OCEAN_DEEP);
-    gradient.addColorStop(0.55, c.OCEAN_MID);
-    gradient.addColorStop(1, c.OCEAN_LIGHT);
+    gradient.addColorStop(0, p.deep);
+    gradient.addColorStop(0.55, p.mid);
+    gradient.addColorStop(1, p.light);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
@@ -65,7 +86,7 @@ export class OceanRenderer {
     ctx.save();
     for (const s of this.streaks) {
       if (s.x > width) s.x = Math.random() * width;
-      ctx.strokeStyle = `rgba(59, 167, 201, ${s.opacity})`;
+      ctx.strokeStyle = hexToRgba(p.streak, s.opacity);
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(s.x, s.y);
@@ -77,7 +98,7 @@ export class OceanRenderer {
     // Subtle animated foam bands.
     ctx.save();
     ctx.globalAlpha = 0.05;
-    ctx.fillStyle = c.WATER_HIGHLIGHT_2;
+    ctx.fillStyle = p.foam;
     const bandSpacing = 160;
     const offset = this.scrollY % bandSpacing;
     for (let y = -bandSpacing + offset; y < height + bandSpacing; y += bandSpacing) {

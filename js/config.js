@@ -170,6 +170,10 @@ export const CONFIG = {
     LEVELS_UNLOCKED_KEY: 'icebreakerRun.levelsUnlocked',
     LEVELS_COMPLETED_KEY: 'icebreakerRun.levelsCompleted',
     OBSTACLES_OWNED_KEY: 'icebreakerRun.obstaclesOwned',
+    ICEBERG_SKINS_OWNED_KEY: 'icebreakerRun.icebergSkinsOwned',
+    ICEBERG_SKIN_EQUIPPED_KEY: 'icebreakerRun.icebergSkinEquipped',
+    BACKGROUNDS_OWNED_KEY: 'icebreakerRun.backgroundsOwned',
+    BACKGROUND_EQUIPPED_KEY: 'icebreakerRun.backgroundEquipped',
     USERNAME_KEY: 'icebreakerRun.username',
     USERNAME_PIN_KEY: 'icebreakerRun.usernamePin'
   },

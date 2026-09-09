@@ -172,6 +172,8 @@ export class Game {
     this.ui.el.btnBoatShopBack.addEventListener('click', () => this._backToMenu());
     this.ui.onBoatAction((action, boatId) => this._handleBoatAction(action, boatId));
     this.ui.onObstacleAction((action, obstacleId) => this._handleObstacleAction(action, obstacleId));
+    this.ui.onIcebergSkinAction((action, skinId) => this._handleIcebergSkinAction(action, skinId));
+    this.ui.onBackgroundAction((action, backgroundId) => this._handleBackgroundAction(action, backgroundId));
 
     // Username entry (first launch) + global leaderboard
     this.ui.onUsernameSubmit((rawValue, rawPin) => this._handleUsernameSubmit(rawValue, rawPin));
@@ -330,6 +332,8 @@ export class Game {
     this.ui.showForState(States.BOAT_SHOP, { coins: this.progression.coins });
     this.ui.renderBoatGrid(this.progression);
     this.ui.renderObstacleGrid(this.progression);
+    this.ui.renderIcebergSkinGrid(this.progression);
+    this.ui.renderBackgroundGrid(this.progression);
   }
 
   _handleBoatAction(action, boatId) {
@@ -359,6 +363,35 @@ export class Game {
     }
     this.ui.renderObstacleGrid(this.progression);
     this.ui.el.shopCoins.textContent = String(this.progression.coins);
+  }
+
+  _handleIcebergSkinAction(action, skinId) {
+    if (action === 'purchase') {
+      const purchased = this.progression.purchaseIcebergSkin(skinId);
+      if (purchased) {
+        this.audio.click();
+        this.ui.flashPurchased();
+      }
+    } else if (action === 'equip') {
+      this.progression.equipIcebergSkin(skinId);
+      this.audio.click();
+    }
+    // Cosmetic-only, device-local — no _pushProgressToServer() call needed here.
+    this.ui.renderIcebergSkinGrid(this.progression);
+  }
+
+  _handleBackgroundAction(action, backgroundId) {
+    if (action === 'purchase') {
+      const purchased = this.progression.purchaseBackground(backgroundId);
+      if (purchased) {
+        this.audio.click();
+        this.ui.flashPurchased();
+      }
+    } else if (action === 'equip') {
+      this.progression.equipBackground(backgroundId);
+      this.audio.click();
+    }
+    this.ui.renderBackgroundGrid(this.progression);
   }
 
   _backToMenu() {
@@ -528,6 +561,12 @@ export class Game {
     this.audio.ensureContext();
     this.audio.click();
     this._resetEntities();
+
+    // Apply whichever cosmetic skins are currently equipped — checked fresh
+    // at the start of every run so a change made in the shop takes effect
+    // immediately on the next play, without needing a page reload.
+    this.renderer.setIcebergSkin(this.progression.getEquippedIcebergSkinDef().colors);
+    this.renderer.ocean.setPalette(this.progression.getEquippedBackgroundDef().colors);
 
     if (this.mode === 'race') {
       this._raceCountdownMsRemaining = CONFIG.RACE.COUNTDOWN_SECONDS * 1000;

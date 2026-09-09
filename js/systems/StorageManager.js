@@ -142,6 +142,49 @@ export class StorageManager {
     return this._set(CONFIG.STORAGE.OBSTACLES_OWNED_KEY, list);
   }
 
+  // --- Iceberg skins (cosmetic, device-local only — not synced to the
+  // server account, unlike coins/boats/obstacles/levels below) -------------
+
+  getOwnedIcebergSkins() {
+    const value = this._get(CONFIG.STORAGE.ICEBERG_SKINS_OWNED_KEY, ['classic']);
+    if (!Array.isArray(value) || value.length === 0) return ['classic'];
+    return value.includes('classic') ? value : ['classic', ...value];
+  }
+
+  setOwnedIcebergSkins(list) {
+    return this._set(CONFIG.STORAGE.ICEBERG_SKINS_OWNED_KEY, list);
+  }
+
+  getEquippedIcebergSkin() {
+    const value = this._get(CONFIG.STORAGE.ICEBERG_SKIN_EQUIPPED_KEY, 'classic');
+    return typeof value === 'string' ? value : 'classic';
+  }
+
+  setEquippedIcebergSkin(id) {
+    return this._set(CONFIG.STORAGE.ICEBERG_SKIN_EQUIPPED_KEY, id);
+  }
+
+  // --- Backgrounds (cosmetic, device-local only) ----------------------------
+
+  getOwnedBackgrounds() {
+    const value = this._get(CONFIG.STORAGE.BACKGROUNDS_OWNED_KEY, ['classic']);
+    if (!Array.isArray(value) || value.length === 0) return ['classic'];
+    return value.includes('classic') ? value : ['classic', ...value];
+  }
+
+  setOwnedBackgrounds(list) {
+    return this._set(CONFIG.STORAGE.BACKGROUNDS_OWNED_KEY, list);
+  }
+
+  getEquippedBackground() {
+    const value = this._get(CONFIG.STORAGE.BACKGROUND_EQUIPPED_KEY, 'classic');
+    return typeof value === 'string' ? value : 'classic';
+  }
+
+  setEquippedBackground(id) {
+    return this._set(CONFIG.STORAGE.BACKGROUND_EQUIPPED_KEY, id);
+  }
+
   // --- Leaderboard username --------------------------------------------------
 
   getUsername() {
