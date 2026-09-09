@@ -58,6 +58,12 @@ in place — a personal best replaces it, a lower score is silently ignored.
 wrangler d1 execute icebreaker-leaderboard --remote --file=./migrations/0004_player_banning.sql
 ```
 
+**Redemption rate-limiting, activity log, and username PINs:**
+
+```
+wrangler d1 execute icebreaker-leaderboard --remote --file=./migrations/0005_ratelimit_activitylog_pins.sql
+```
+
 **Set the danger secret** (separate from `ADMIN_KEY` — required in addition
 to it for ban/unban/full account removal, so the regular admin key alone
 isn't enough for those three actions):
@@ -114,8 +120,12 @@ normal static page, just not linked from the game's menu) and enter the
   row but zeroes it), this deletes the account, their leaderboard entry,
   and their code-redemption history outright. Also requires `DANGER_KEY`.
 - **Create/delete redeem codes** — coins + an optional single item reward,
-  with optional max-uses and an optional expiry date.
+  with optional max-uses and an optional expiry date. **Bulk-generate** works
+  the same way but produces several random codes at once, sharing the same
+  reward — handy for a giveaway.
 - **Moderate the leaderboard** — delete individual score entries.
+- **Activity log** — every grant/reset/ban/unban/remove/code change is
+  recorded with a timestamp, viewable in the Activity tab.
 
 The panel itself is reachable by anyone who finds the URL, but every admin
 action requires the correct `X-Admin-Key` header, checked server-side — so
@@ -128,7 +138,7 @@ keep the key itself private, not the URL.
 - `POST /api/scores` `{ name, score }` → `{ ok, rank }`
 
 **Public — accounts**
-- `POST /api/players/register` `{ username, initialState }` → `{ ok, player }`
+- `POST /api/players/register` `{ username, pin, initialState }` → `{ ok, player }`. `pin` is a 4-digit string: sets a new PIN for a brand-new username, must match the existing PIN for a name that already has one, or is ignored for a legacy account with no PIN set (which then adopts whatever PIN is provided). Returns 409 on a PIN mismatch.
 - `GET /api/players/:username/progress` → `{ player }`
 - `POST /api/players/:username/progress` `{ coins, boatsOwned, boatEquipped, obstaclesOwned, levelsUnlocked, levelsCompleted }` → `{ ok }`
 
@@ -143,7 +153,9 @@ keep the key itself private, not the URL.
 - `DELETE /api/admin/leaderboard/:id` → `{ ok }`
 - `GET /api/admin/codes` → `{ codes }`
 - `POST /api/admin/codes` `{ code, coinsReward, itemType, itemId, maxUses, expiresAt }` → `{ ok }`
+- `POST /api/admin/codes/bulk` `{ count, prefix?, coinsReward, itemType, itemId, maxUses, expiresAt }` → `{ ok, codes: [...] }`
 - `DELETE /api/admin/codes/:code` → `{ ok }`
+- `GET /api/admin/activity?limit=100` → `{ activity }`
 
 **Admin, also requires `X-Danger-Key: <DANGER_KEY>`**
 - `POST /api/admin/players/:username/ban` → `{ ok }`

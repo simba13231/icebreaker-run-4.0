@@ -62,3 +62,21 @@ export function playerRowToSnapshot(row) {
     updatedAt: row.updated_at
   };
 }
+
+/** SHA-256 hash of a PIN, hex-encoded. Uses the Workers runtime's Web Crypto API. */
+export async function hashPin(pin) {
+  const data = new TextEncoder().encode(String(pin));
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Logs an admin action for the activity feed. Best-effort — never throws. */
+export async function logAdminAction(env, action, target, detail) {
+  try {
+    await env.DB.prepare('INSERT INTO admin_actions (action, target, detail) VALUES (?, ?, ?)')
+      .bind(action, target || null, detail || null)
+      .run();
+  } catch {
+    // Logging failures shouldn't ever break the actual admin action.
+  }
+}

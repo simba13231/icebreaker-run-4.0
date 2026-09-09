@@ -240,6 +240,7 @@
     <div class="nav-item tab active" data-tab="players">Players</div>
     <div class="nav-item tab" data-tab="codes">Codes</div>
     <div class="nav-item tab" data-tab="leaderboard">Leaderboard</div>
+    <div class="nav-item tab" data-tab="activity">Activity</div>
     <div id="worker-url-label" class="worker-url"></div>
   </div>
 
@@ -303,6 +304,27 @@
       </div>
 
       <div class="card">
+        <h3>Bulk-generate codes</h3>
+        <p class="empty-note" style="margin-top:-6px;">Same reward on every code \u2014 handy for a giveaway. Random, hard-to-guess codes, optionally with a shared prefix.</p>
+        <div class="form-row">
+          <input id="bulk-count" type="number" placeholder="how many" data-w="sm" value="10" />
+          <input id="bulk-prefix" type="text" placeholder="prefix (optional)" data-w="sm" style="text-transform:uppercase;" />
+          <input id="bulk-coins" type="number" placeholder="coins" data-w="sm" />
+          <select id="bulk-item-type">
+            <option value="">No item</option>
+            <option value="boat">Boat</option>
+            <option value="obstacle">Obstacle</option>
+          </select>
+          <input id="bulk-item-id" type="text" placeholder="item id" />
+          <input id="bulk-max-uses" type="number" placeholder="max uses (∞)" data-w="sm" value="1" />
+          <input id="bulk-expires" type="date" />
+          <button id="btn-bulk-create">Generate</button>
+        </div>
+        <p id="bulk-create-status" class="status"></p>
+        <div id="bulk-result-wrap"></div>
+      </div>
+
+      <div class="card">
         <div class="toolbar">
           <h3 style="margin:0;">Active codes</h3>
           <div style="flex:1;"></div>
@@ -328,6 +350,24 @@
         </div>
         <div id="leaderboard-table-wrap"></div>
         <p id="leaderboard-status" class="status"></p>
+      </div>
+    </div>
+
+    <!-- Activity -->
+    <div class="view" id="panel-activity">
+      <div class="view-header">
+        <h2>Activity log</h2>
+        <p>Every grant, reset, ban, and code change, most recent first.</p>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h3 style="margin:0;">Recent actions</h3>
+          <div style="flex:1;"></div>
+          <button class="secondary" id="btn-activity-refresh">Refresh</button>
+        </div>
+        <div id="activity-table-wrap"></div>
+        <p id="activity-status" class="status"></p>
       </div>
     </div>
   </div>
@@ -390,6 +430,7 @@ async function tryUnlock() {
     refreshPlayers();
     refreshCodes();
     refreshLeaderboard();
+    refreshActivity();
   } catch (err) {
     // showGate already called by adminFetch on 401; handle other failures too.
     if (err.message !== 'Unauthorized') showGate(err.message);
@@ -733,6 +774,95 @@ async function deleteScore(id) {
   }
 }
 
+// --- Bulk code generation -------------------------------------------------------
+
+document.getElementById('btn-bulk-create').addEventListener('click', async () => {
+  const status = document.getElementById('bulk-create-status');
+  const resultWrap = document.getElementById('bulk-result-wrap');
+  const count = document.getElementById('bulk-count').value;
+  const prefix = document.getElementById('bulk-prefix').value.trim();
+  const coinsReward = document.getElementById('bulk-coins').value;
+  const itemType = document.getElementById('bulk-item-type').value || null;
+  const itemId = document.getElementById('bulk-item-id').value.trim() || null;
+  const maxUsesRaw = document.getElementById('bulk-max-uses').value;
+  const expiresAt = document.getElementById('bulk-expires').value || null;
+
+  status.textContent = 'Generating…';
+  status.className = 'status';
+  resultWrap.innerHTML = '';
+  try {
+    const data = await adminFetch('/api/admin/codes/bulk', {
+      method: 'POST',
+      body: JSON.stringify({
+        count: count ? Number(count) : 0,
+        prefix,
+        coinsReward: coinsReward ? Number(coinsReward) : 0,
+        itemType,
+        itemId,
+        maxUses: maxUsesRaw === '' ? null : Number(maxUsesRaw),
+        expiresAt
+      })
+    });
+    const codes = data.codes || [];
+    status.textContent = `Created ${codes.length} code(s).`;
+    status.className = 'status ok';
+    if (codes.length) {
+      const list = codes.join('\n');
+      resultWrap.innerHTML = `
+        <textarea readonly style="width:100%; height:100px; margin-top:8px; font-family: var(--font-data); font-size: 0.8rem; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 3px; padding: 8px;">${escapeHtml(list)}</textarea>
+        <button class="secondary" id="btn-copy-bulk-codes" style="margin-top:6px;">Copy all</button>
+      `;
+      document.getElementById('btn-copy-bulk-codes').addEventListener('click', () => {
+        navigator.clipboard.writeText(list);
+      });
+    }
+    refreshCodes();
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'status error';
+  }
+});
+
+// --- Activity log ----------------------------------------------------------------
+
+function renderActivityTable(activity) {
+  const wrap = document.getElementById('activity-table-wrap');
+  if (!activity || activity.length === 0) {
+    wrap.innerHTML = '<p class="empty-note">No activity yet.</p>';
+    return;
+  }
+  const rows = activity.map((a) => `
+    <tr>
+      <td>${escapeHtml(a.created_at || '')}</td>
+      <td>${escapeHtml(a.action)}</td>
+      <td>${escapeHtml(a.target || '')}</td>
+      <td>${escapeHtml(a.detail || '')}</td>
+    </tr>
+  `).join('');
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>When</th><th>Action</th><th>Target</th><th>Detail</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+async function refreshActivity() {
+  const status = document.getElementById('activity-status');
+  status.textContent = 'Loading…';
+  status.className = 'status';
+  try {
+    const data = await adminFetch('/api/admin/activity?limit=150');
+    renderActivityTable(data.activity);
+    status.textContent = '';
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'status error';
+  }
+}
+
+document.getElementById('btn-activity-refresh').addEventListener('click', refreshActivity);
+
 // --- Boot ------------------------------------------------------------------------
 
 if (adminKey) {
@@ -740,6 +870,7 @@ if (adminKey) {
   refreshPlayers();
   refreshCodes();
   refreshLeaderboard();
+  refreshActivity();
 } else {
   showGate();
 }

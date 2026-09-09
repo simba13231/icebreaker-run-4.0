@@ -4,6 +4,8 @@
 
 import { json, playerRowToSnapshot } from './shared.js';
 
+const MIN_REDEEM_INTERVAL_MS = 2000; // simple per-IP throttle against code-guessing
+
 export async function handleRedeem(request, env) {
   let body;
   try {
@@ -17,6 +19,19 @@ export async function handleRedeem(request, env) {
 
   if (!username) return json({ error: 'Missing username.' }, 400);
   if (!code) return json({ error: 'Enter a code.' }, 400);
+
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const recent = await env.DB.prepare(
+    'SELECT redeemed_at FROM code_redemptions WHERE ip = ? ORDER BY redeemed_at DESC LIMIT 1'
+  )
+    .bind(ip)
+    .first();
+  if (recent && recent.redeemed_at) {
+    const lastMs = new Date(`${recent.redeemed_at.replace(' ', 'T')}Z`).getTime();
+    if (Number.isFinite(lastMs) && Date.now() - lastMs < MIN_REDEEM_INTERVAL_MS) {
+      return json({ error: 'Slow down and try again in a moment.' }, 429);
+    }
+  }
 
   const player = await env.DB.prepare('SELECT * FROM players WHERE username = ?').bind(username).first();
   if (!player) return json({ error: 'Player not registered yet — open the game once first.' }, 404);
@@ -60,7 +75,7 @@ export async function handleRedeem(request, env) {
     env.DB.prepare(
       'UPDATE players SET coins = ?, boats_owned = ?, obstacles_owned = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?'
     ).bind(newCoins, JSON.stringify(boatsOwned), JSON.stringify(obstaclesOwned), username),
-    env.DB.prepare('INSERT INTO code_redemptions (code, username) VALUES (?, ?)').bind(code, username),
+    env.DB.prepare('INSERT INTO code_redemptions (code, username, ip) VALUES (?, ?, ?)').bind(code, username, ip),
     env.DB.prepare('UPDATE codes SET used_count = used_count + 1 WHERE code = ?').bind(code)
   ]);
 

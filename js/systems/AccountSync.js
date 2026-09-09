@@ -21,17 +21,20 @@ export class AccountSync {
   /**
    * Registers (or re-confirms) this username as an account, seeding it with
    * `initialState` only if the server has never seen this username before.
-   * Returns the server's authoritative snapshot on success, or null.
+   * `pin` proves this device "owns" an existing name, or sets a new PIN for
+   * a brand-new one. Returns the server's authoritative snapshot on
+   * success; throws (with the server's actual error message) on failure —
+   * e.g. the name being taken under a different PIN.
    */
-  async register(username, initialState) {
+  async register(username, pin, initialState) {
     if (!this.isConfigured) return null;
     const res = await fetch(`${this.apiBaseUrl}/api/players/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, initialState })
+      body: JSON.stringify({ username, pin, initialState })
     });
-    if (!res.ok) throw new Error(`Registration failed (${res.status})`);
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Registration failed (${res.status})`);
     return data.player || null;
   }
 

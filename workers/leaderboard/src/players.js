@@ -8,7 +8,7 @@
 // row down on load (so admin grants/resets actually reach the player) and
 // pushes to it at checkpoints (purchases, game over, level complete).
 
-import { json, validateUsername, playerRowToSnapshot } from './shared.js';
+import { json, validateUsername, playerRowToSnapshot, hashPin } from './shared.js';
 
 const MAX_COINS = 10_000_000;
 const MAX_LEVEL = 1000;
@@ -49,15 +49,45 @@ export async function handleRegister(request, env) {
   const { name, error } = validateUsername(body.username);
   if (error) return json({ error }, 400);
 
-  const initial = normalizeProgressInput(body.initialState || {});
+  const providedPin = typeof body.pin === 'string' ? body.pin.trim() : '';
 
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO players
-      (username, coins, boats_owned, boat_equipped, obstacles_owned, levels_unlocked, levels_completed)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(name, initial.coins, initial.boatsOwned, initial.boatEquipped, initial.obstaclesOwned, initial.levelsUnlocked, initial.levelsCompleted)
-    .run();
+  const existing = await env.DB.prepare('SELECT * FROM players WHERE username = ?').bind(name).first();
+
+  if (existing) {
+    if (existing.pin_hash) {
+      // PIN required to reconcile with this existing account.
+      const providedHash = providedPin ? await hashPin(providedPin) : null;
+      if (providedHash !== existing.pin_hash) {
+        return json({ error: 'That name is taken (wrong PIN).' }, 409);
+      }
+    } else if (providedPin) {
+      // Legacy account created before PINs existed — claim it now with
+      // whatever PIN this device provides, so it's protected going forward.
+      await env.DB.prepare('UPDATE players SET pin_hash = ? WHERE username = ?')
+        .bind(await hashPin(providedPin), name)
+        .run();
+    }
+    const row = await env.DB.prepare('SELECT * FROM players WHERE username = ?').bind(name).first();
+    return json({ ok: true, player: playerRowToSnapshot(row) });
+  }
+
+  const initial = normalizeProgressInput(body.initialState || {});
+  const pinHash = providedPin ? await hashPin(providedPin) : null;
+
+  try {
+    await env.DB.prepare(
+      `INSERT INTO players
+        (username, coins, boats_owned, boat_equipped, obstacles_owned, levels_unlocked, levels_completed, pin_hash)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(name, initial.coins, initial.boatsOwned, initial.boatEquipped, initial.obstaclesOwned, initial.levelsUnlocked, initial.levelsCompleted, pinHash)
+      .run();
+  } catch {
+    // Extremely unlikely race: two devices registered the same brand-new
+    // name at the same instant. Whoever lost the race just retries as a
+    // "reconcile with existing" registration instead of erroring out.
+    return handleRegister(new Request(request.url, { method: 'POST', body: JSON.stringify(body) }), env);
+  }
 
   const row = await env.DB.prepare('SELECT * FROM players WHERE username = ?').bind(name).first();
   if (!row) return json({ error: 'Registration failed.' }, 500);

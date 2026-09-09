@@ -39,7 +39,9 @@ import {
   handleAdminDeleteScore,
   handleAdminListCodes,
   handleAdminCreateCode,
-  handleAdminDeleteCode
+  handleAdminBulkCreateCodes,
+  handleAdminDeleteCode,
+  handleAdminListActivity
 } from './admin.js';
 
 const MAX_SCORE = 999999;
@@ -193,9 +195,12 @@ export default {
 
       if (path === '/api/admin/codes' && request.method === 'GET') return handleAdminListCodes(env);
       if (path === '/api/admin/codes' && request.method === 'POST') return handleAdminCreateCode(request, env);
+      if (path === '/api/admin/codes/bulk' && request.method === 'POST') return handleAdminBulkCreateCodes(request, env);
 
       const deleteCodeMatch = path.match(/^\/api\/admin\/codes\/([^/]+)$/);
       if (deleteCodeMatch && request.method === 'DELETE') return handleAdminDeleteCode(decodeURIComponent(deleteCodeMatch[1]), env);
+
+      if (path === '/api/admin/activity' && request.method === 'GET') return handleAdminListActivity(url, env);
 
       return json({ error: 'Not found.' }, 404);
     }

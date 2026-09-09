@@ -153,6 +153,20 @@ export class StorageManager {
     return this._set(CONFIG.STORAGE.USERNAME_KEY, name);
   }
 
+  /**
+   * The 4-digit PIN tied to this device's username — proves to the server
+   * this device "owns" the name, so someone else can't claim it elsewhere.
+   * Stored locally only; the server only ever sees/stores a hash of it.
+   */
+  getPin() {
+    const value = this._get(CONFIG.STORAGE.USERNAME_PIN_KEY, '');
+    return typeof value === 'string' ? value : '';
+  }
+
+  setPin(pin) {
+    return this._set(CONFIG.STORAGE.USERNAME_PIN_KEY, pin);
+  }
+
   // --- Progress snapshot (for server sync) -----------------------------------
 
   /** Everything the server-side account needs to mirror this device's progress. */
