@@ -20,6 +20,13 @@
   display: flex;
   opacity: 1;
   pointer-events: auto;
+  /* #game-root sets touch-action:none globally so gameplay swipes don't
+     trigger page scroll/zoom — but that inherits down into every overlay
+     panel too, silently breaking touch-drag scrolling anywhere a list is
+     taller than its container (level select, shop grids, leaderboard).
+     Menus/lists aren't gameplay surfaces, so re-allow vertical touch
+     panning here specifically. */
+  touch-action: pan-y;
 }
 
 .screen--overlay {
