@@ -29,6 +29,12 @@ import { json, corsHeaders, validateUsername } from './shared.js';
 import { handleRegister, handleGetProgress, handlePostProgress } from './players.js';
 import { handleRedeem } from './codes.js';
 import {
+  handleGetDailyScores,
+  handlePostDailyScore,
+  handleGetWeeklyScores,
+  handlePostWeeklyScore
+} from './periods.js';
+import {
   handleAdminListPlayers,
   handleAdminGrant,
   handleAdminReset,
@@ -163,6 +169,12 @@ export default {
 
     // --- Public: code redemption --------------------------------------------
     if (path === '/api/codes/redeem' && request.method === 'POST') return handleRedeem(request, env);
+
+    // --- Public: daily challenge + weekly tournament leaderboards -----------
+    if (path === '/api/daily/scores' && request.method === 'GET') return handleGetDailyScores(url, env);
+    if (path === '/api/daily/scores' && request.method === 'POST') return handlePostDailyScore(request, env);
+    if (path === '/api/weekly/scores' && request.method === 'GET') return handleGetWeeklyScores(url, env);
+    if (path === '/api/weekly/scores' && request.method === 'POST') return handlePostWeeklyScore(request, env);
 
     // --- Admin (everything below requires X-Admin-Key) ---------------------
     if (path.startsWith('/api/admin/')) {

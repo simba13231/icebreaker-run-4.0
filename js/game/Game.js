@@ -37,6 +37,7 @@ import { PowerUpManager } from '../systems/PowerUpManager.js';
 import { RaceManager } from '../systems/RaceManager.js';
 import { validateUsername } from '../systems/ProfanityFilter.js';
 import { AccountSync } from '../systems/AccountSync.js';
+import { mulberry32, seedFromDateString, todayDateKeyUTC, thisWeekKeyUTC } from '../systems/SeededRandom.js';
 
 import { Renderer } from '../rendering/Renderer.js';
 import { UIManager } from '../ui/UIManager.js';
@@ -164,6 +165,7 @@ export class Game {
     this.ui.el.btnModeLevels.addEventListener('click', () => this._openLevelSelect());
     this.ui.el.btnModeSurvival.addEventListener('click', () => this._startRun('survival'));
     this.ui.el.btnModeRace.addEventListener('click', () => this._startRun('race'));
+    this.ui.el.btnModeDaily.addEventListener('click', () => this._startRun('daily'));
     this.ui.el.btnLevelSelectBack.addEventListener('click', () => this._backToModeSelect());
     this.ui.onLevelSelect((levelNumber) => this._startRun('level', levelNumber));
 
@@ -179,6 +181,7 @@ export class Game {
     this.ui.onUsernameSubmit((rawValue, rawPin) => this._handleUsernameSubmit(rawValue, rawPin));
     this.ui.el.btnLeaderboardOpen.addEventListener('click', () => this._openLeaderboard());
     this.ui.el.btnLeaderboardBack.addEventListener('click', () => this._backToMenu());
+    this.ui.onLeaderboardTabChange((tab) => this._loadLeaderboardTab(tab));
     this.ui.el.btnRedeemOpen.addEventListener('click', () => this._openRedeem());
     this.ui.el.btnRedeemBack.addEventListener('click', () => this._backToMenu());
     this.ui.onRedeemSubmit((rawValue) => this._handleRedeemSubmit(rawValue));
@@ -273,6 +276,13 @@ export class Game {
     } else {
       this.difficulty.configureEndless();
     }
+
+    // Daily Challenge: seed the hazard generator from today's UTC date so
+    // every player faces the exact same obstacle sequence — the core
+    // fairness requirement for a shared daily leaderboard. (Coin/power-up
+    // timing still uses plain randomness; only the hazard layout itself
+    // needs to be identical for the challenge to be a fair comparison.)
+    this.spawner.setRng(this.mode === 'daily' ? mulberry32(seedFromDateString(todayDateKeyUTC())) : Math.random);
 
     this.scoreManager.reset();
     this.spawner.reset();
@@ -522,8 +532,12 @@ export class Game {
   async _openLeaderboard() {
     this.audio.click();
     this.state.set(States.LEADERBOARD);
+    this.ui.resetLeaderboardTab();
     this.ui.showForState(States.LEADERBOARD);
+    this._loadLeaderboardTab('alltime');
+  }
 
+  async _loadLeaderboardTab(tab) {
     if (!this.cloudLeaderboard.isConfigured) {
       this.ui.showLeaderboardStatus('Leaderboard is not set up yet — check back soon!');
       return;
@@ -531,8 +545,15 @@ export class Game {
 
     this.ui.showLeaderboardStatus('Loading…');
     try {
-      const scores = await this.cloudLeaderboard.getTopScores(CONFIG.LEADERBOARD.TOP_SCORES_LIMIT);
-      // Guard against the player navigating away before the fetch resolved.
+      let scores;
+      if (tab === 'daily') {
+        scores = await this.cloudLeaderboard.getDailyScores(todayDateKeyUTC(), CONFIG.LEADERBOARD.TOP_SCORES_LIMIT);
+      } else if (tab === 'weekly') {
+        scores = await this.cloudLeaderboard.getWeeklyScores(thisWeekKeyUTC(), CONFIG.LEADERBOARD.TOP_SCORES_LIMIT);
+      } else {
+        scores = await this.cloudLeaderboard.getTopScores(CONFIG.LEADERBOARD.TOP_SCORES_LIMIT);
+      }
+      // Guard against the player switching tabs/navigating away before the fetch resolved.
       if (this.state.is(States.LEADERBOARD)) this.ui.renderLeaderboard(scores);
     } catch (err) {
       if (this.state.is(States.LEADERBOARD)) {
@@ -675,11 +696,27 @@ export class Game {
 
     const result = this.leaderboard.submitScore(this.scoreManager.displayScore);
 
-    // Best-effort global leaderboard submission — never blocks or affects
-    // the game-over screen, which only ever reflects the local high score.
+    // Best-effort leaderboard submissions — never block or affect the
+    // game-over screen, which only ever reflects the local high score.
+    // - Daily Challenge scores go to their own per-day leaderboard only
+    //   (not the main all-time one, since the seeded layout makes it a
+    //   different comparison).
+    // - Endless-mode scores also feed the Weekly Tournament leaderboard,
+    //   in addition to the main all-time one.
     const username = this.storage.getUsername();
     if (username && this.cloudLeaderboard.isConfigured) {
-      this.cloudLeaderboard.submitScore(username, this.scoreManager.displayScore).catch(() => {});
+      if (this.mode === 'daily') {
+        this.cloudLeaderboard
+          .submitDailyScore(username, todayDateKeyUTC(), this.scoreManager.displayScore)
+          .catch(() => {});
+      } else {
+        this.cloudLeaderboard.submitScore(username, this.scoreManager.displayScore).catch(() => {});
+        if (this.mode === 'endless') {
+          this.cloudLeaderboard
+            .submitWeeklyScore(username, thisWeekKeyUTC(), this.scoreManager.displayScore)
+            .catch(() => {});
+        }
+      }
     }
     this._pushProgressToServer(); // syncs coins earned this run (and any level unlocks) to the account
     const canRevive =
@@ -905,15 +942,19 @@ export class Game {
       // --- Hazard spawning (icebergs, purchased obstacle skins, oncoming boats) ---
       this.spawner.update(deltaMs, this.difficulty, (blockedLanes) => {
         const spawnY = -CONFIG.ICEBERG.MAX_HEIGHT;
-        const unlockedObstacleDefs = this.progression.getUnlockedObstacleDefs();
-        const allowBoats = this.mode === 'endless';
+        // Daily Challenge forces the classic iceberg-only pool — purchased
+        // obstacle skins are cosmetic-adjacent gameplay variety that would
+        // otherwise make the "same challenge for everyone" comparison unfair.
+        const unlockedObstacleDefs = this.mode === 'daily' ? [] : this.progression.getUnlockedObstacleDefs();
+        const allowBoats = this.mode === 'endless' || this.mode === 'daily';
         const newHazards = createHazardsForRow(
           blockedLanes,
           this.lanePositions,
           spawnY,
           unlockedObstacleDefs,
           this.scoreManager.displayScore,
-          allowBoats
+          allowBoats,
+          this.spawner.rng
         );
         this.hazards.push(...newHazards);
         // Tag each hazard with the boat's lane at spawn time — used below to

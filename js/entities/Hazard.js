@@ -12,18 +12,18 @@ import { getHitbox } from '../game/Collision.js';
 
 let nextId = 1;
 
-function randRange(min, max) {
-  return min + Math.random() * (max - min);
+function randRange(min, max, rng = Math.random) {
+  return min + rng() * (max - min);
 }
 
 /** Generates a random-ish but consistent polygon "cap" silhouette. */
-function generateShape(width, height) {
+function generateShape(width, height, rng = Math.random) {
   const points = [];
-  const peaks = 5 + Math.floor(Math.random() * 3); // 5-7 points around the top
+  const peaks = 5 + Math.floor(rng() * 3); // 5-7 points around the top
   for (let i = 0; i <= peaks; i++) {
     const t = i / peaks;
     const x = -width / 2 + t * width;
-    const jitter = randRange(0.08, 0.32) * height;
+    const jitter = randRange(0.08, 0.32, rng) * height;
     const y = -height / 2 + jitter * (i % 2 === 0 ? 1 : 0.5);
     points.push({ x, y });
   }
@@ -37,8 +37,11 @@ export class Hazard {
    * @param {number} y
    * @param {object} obstacleDef - entry from data/Obstacles.js (kind, damage, ratios), or null for a default iceberg
    * @param {boolean} isBoat - true for an oncoming rival boat hazard
+   * @param {function} rng - defaults to Math.random; pass a seeded generator
+   *   (see systems/SeededRandom.js) for Daily Challenge mode, so every
+   *   player gets the exact same obstacle shapes/sizes/rotations that day.
    */
-  constructor(laneIndex, x, y, obstacleDef = null, isBoat = false) {
+  constructor(laneIndex, x, y, obstacleDef = null, isBoat = false, rng = Math.random) {
     this.id = nextId++;
     this.laneIndex = laneIndex;
     this.x = x;
@@ -49,23 +52,23 @@ export class Hazard {
       ? CONFIG.ONCOMING_BOATS.DAMAGE
       : (obstacleDef ? obstacleDef.damage : CONFIG.SURVIVAL.DEFAULT_OBSTACLE_DAMAGE);
 
-    const scale = randRange(0.85, 1.15);
+    const scale = randRange(0.85, 1.15, rng);
     const widthRatio = obstacleDef && obstacleDef.widthRatio ? obstacleDef.widthRatio : 1;
     const heightRatio = obstacleDef && obstacleDef.heightRatio ? obstacleDef.heightRatio : 1;
 
     if (isBoat) {
-      this.width = CONFIG.BOAT.WIDTH * randRange(0.95, 1.1);
-      this.height = CONFIG.BOAT.HEIGHT * randRange(0.95, 1.1);
+      this.width = CONFIG.BOAT.WIDTH * randRange(0.95, 1.1, rng);
+      this.height = CONFIG.BOAT.HEIGHT * randRange(0.95, 1.1, rng);
     } else {
-      this.width = randRange(CONFIG.ICEBERG.MIN_WIDTH, CONFIG.ICEBERG.MAX_WIDTH) * scale * widthRatio;
-      this.height = randRange(CONFIG.ICEBERG.MIN_HEIGHT, CONFIG.ICEBERG.MAX_HEIGHT) * scale * heightRatio;
+      this.width = randRange(CONFIG.ICEBERG.MIN_WIDTH, CONFIG.ICEBERG.MAX_WIDTH, rng) * scale * widthRatio;
+      this.height = randRange(CONFIG.ICEBERG.MIN_HEIGHT, CONFIG.ICEBERG.MAX_HEIGHT, rng) * scale * heightRatio;
     }
 
     this.rotation = isBoat
       ? 0
-      : randRange(-CONFIG.ICEBERG.MAX_ROTATION_DEG, CONFIG.ICEBERG.MAX_ROTATION_DEG);
-    this.shape = generateShape(this.width, this.height);
-    this.shadeSeed = Math.random();
+      : randRange(-CONFIG.ICEBERG.MAX_ROTATION_DEG, CONFIG.ICEBERG.MAX_ROTATION_DEG, rng);
+    this.shape = generateShape(this.width, this.height, rng);
+    this.shadeSeed = rng();
     this.markedForRemoval = false;
   }
 

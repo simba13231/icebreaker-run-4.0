@@ -302,4 +302,46 @@ export class CloudLeaderboardService {
     if (!res.ok) throw new Error(`Score submit failed (${res.status})`);
     return res.json();
   }
+
+  // --- Daily Challenge leaderboard ---------------------------------------------
+
+  async getDailyScores(dateKey, limit = 50) {
+    if (!this.isConfigured) return [];
+    const res = await fetch(`${this.apiBaseUrl}/api/daily/scores?date=${encodeURIComponent(dateKey)}&limit=${encodeURIComponent(limit)}`);
+    if (!res.ok) throw new Error(`Daily leaderboard fetch failed (${res.status})`);
+    const data = await res.json();
+    return Array.isArray(data.scores) ? data.scores : [];
+  }
+
+  async submitDailyScore(username, dateKey, score) {
+    if (!this.isConfigured) return null;
+    const res = await fetch(`${this.apiBaseUrl}/api/daily/scores`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, dateKey, score })
+    });
+    if (!res.ok) throw new Error(`Daily score submit failed (${res.status})`);
+    return res.json();
+  }
+
+  // --- Weekly Tournament leaderboard --------------------------------------------
+
+  async getWeeklyScores(weekKey, limit = 50) {
+    if (!this.isConfigured) return [];
+    const res = await fetch(`${this.apiBaseUrl}/api/weekly/scores?week=${encodeURIComponent(weekKey)}&limit=${encodeURIComponent(limit)}`);
+    if (!res.ok) throw new Error(`Weekly leaderboard fetch failed (${res.status})`);
+    const data = await res.json();
+    return Array.isArray(data.scores) ? data.scores : [];
+  }
+
+  async submitWeeklyScore(username, weekKey, score) {
+    if (!this.isConfigured) return null;
+    const res = await fetch(`${this.apiBaseUrl}/api/weekly/scores`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, weekKey, score })
+    });
+    if (!res.ok) throw new Error(`Weekly score submit failed (${res.status})`);
+    return res.json();
+  }
 }

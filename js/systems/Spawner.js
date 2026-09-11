@@ -24,28 +24,40 @@
 import { CONFIG } from '../config.js';
 import { Hazard } from '../entities/Hazard.js';
 
-function randInt(maxExclusive) {
-  return Math.floor(Math.random() * maxExclusive);
+function randInt(maxExclusive, rng = Math.random) {
+  return Math.floor(rng() * maxExclusive);
 }
 
-function shuffle(arr) {
+function shuffle(arr, rng = Math.random) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
-    const j = randInt(i + 1);
+    const j = randInt(i + 1, rng);
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
 export class Spawner {
-  constructor(laneCount) {
+  /**
+   * @param {number} laneCount
+   * @param {function} rng - defaults to Math.random; pass a seeded generator
+   *   for Daily Challenge mode so the exact same obstacle pattern generates
+   *   for every player on a given day.
+   */
+  constructor(laneCount, rng = Math.random) {
     this.laneCount = laneCount;
+    this.rng = rng;
     this.reset();
+  }
+
+  /** Swaps the RNG mid-lifetime (used to switch into/out of Daily Challenge's seeded generator). */
+  setRng(rng) {
+    this.rng = rng;
   }
 
   reset() {
     this.timeSinceLastSpawnMs = 0;
-    this.lastSafeLane = randInt(this.laneCount);
+    this.lastSafeLane = randInt(this.laneCount, this.rng);
     this.pendingRows = []; // queue of {lanes: Set, rowOffset} for multi-row patterns
   }
 
@@ -67,8 +79,8 @@ export class Spawner {
     if (tierProgress > 0.65) maxBlock = this.laneCount - 1; // near-max complexity
     maxBlock = Math.min(maxBlock, this.laneCount - 1); // never block all lanes
 
-    const blockCount = 1 + randInt(maxBlock);
-    const laneOrder = shuffle([...Array(this.laneCount).keys()]);
+    const blockCount = 1 + randInt(maxBlock, this.rng);
+    const laneOrder = shuffle([...Array(this.laneCount).keys()], this.rng);
 
     const blocked = new Set();
     for (const lane of laneOrder) {
@@ -92,7 +104,7 @@ export class Spawner {
 
     // Choose the new reference safe lane from the reachable, unblocked set.
     const openLanes = [...reachable].filter((l) => !blocked.has(l));
-    this.lastSafeLane = openLanes[randInt(openLanes.length)];
+    this.lastSafeLane = openLanes[randInt(openLanes.length, this.rng)];
 
     return blocked;
   }
@@ -117,6 +129,7 @@ export class Spawner {
  * @param {object[]} unlockedObstacleDefs - obstacle skins the player owns (from data/Obstacles.js)
  * @param {number} score - current display score, used to decide oncoming-boat chance (endless only)
  * @param {boolean} allowOncomingBoats - only true in Endless mode
+ * @param {function} rng - defaults to Math.random; pass a seeded generator for Daily Challenge mode
  */
 export function createHazardsForRow(
   blockedLanes,
@@ -124,7 +137,8 @@ export function createHazardsForRow(
   spawnY,
   unlockedObstacleDefs = [],
   score = 0,
-  allowOncomingBoats = false
+  allowOncomingBoats = false,
+  rng = Math.random
 ) {
   const hazards = [];
 
@@ -144,16 +158,16 @@ export function createHazardsForRow(
   for (const laneIndex of blockedLanes) {
     const x = lanePositions[laneIndex];
 
-    if (boatChance > 0 && Math.random() < boatChance) {
-      hazards.push(new Hazard(laneIndex, x, spawnY, null, true));
+    if (boatChance > 0 && rng() < boatChance) {
+      hazards.push(new Hazard(laneIndex, x, spawnY, null, true, rng));
       continue;
     }
 
     let obstacleDef = null;
-    if (customPool.length > 0 && Math.random() < CONFIG.SPAWNER.CUSTOM_OBSTACLE_CHANCE) {
-      obstacleDef = customPool[Math.floor(Math.random() * customPool.length)];
+    if (customPool.length > 0 && rng() < CONFIG.SPAWNER.CUSTOM_OBSTACLE_CHANCE) {
+      obstacleDef = customPool[Math.floor(rng() * customPool.length)];
     }
-    hazards.push(new Hazard(laneIndex, x, spawnY, obstacleDef, false));
+    hazards.push(new Hazard(laneIndex, x, spawnY, obstacleDef, false, rng));
   }
   return hazards;
 }

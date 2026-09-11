@@ -103,6 +103,7 @@ export class UIManager {
       btnModeLevels: document.getElementById('btn-mode-levels'),
       btnModeSurvival: document.getElementById('btn-mode-survival'),
       btnModeRace: document.getElementById('btn-mode-race'),
+      btnModeDaily: document.getElementById('btn-mode-daily'),
       btnLevelSelectBack: document.getElementById('btn-level-select-back'),
 
       btnSettingsOpen: document.getElementById('btn-settings-open'),
@@ -138,6 +139,9 @@ export class UIManager {
       btnLeaderboardBack: document.getElementById('btn-leaderboard-back'),
       leaderboardList: document.getElementById('leaderboard-list'),
       leaderboardStatus: document.getElementById('leaderboard-status'),
+      btnLeaderboardTabAlltime: document.getElementById('btn-leaderboard-tab-alltime'),
+      btnLeaderboardTabDaily: document.getElementById('btn-leaderboard-tab-daily'),
+      btnLeaderboardTabWeekly: document.getElementById('btn-leaderboard-tab-weekly'),
 
       btnRedeemOpen: document.getElementById('btn-redeem-open'),
       btnRedeemBack: document.getElementById('btn-redeem-back'),
@@ -489,6 +493,27 @@ export class UIManager {
   }
 
   // --- Leaderboard ---------------------------------------------------------------
+
+  onLeaderboardTabChange(listener) {
+    this._leaderboardTabListeners = this._leaderboardTabListeners || new Set();
+    this._leaderboardTabListeners.add(listener);
+    this.el.btnLeaderboardTabAlltime.addEventListener('click', () => this._setLeaderboardTab('alltime'));
+    this.el.btnLeaderboardTabDaily.addEventListener('click', () => this._setLeaderboardTab('daily'));
+    this.el.btnLeaderboardTabWeekly.addEventListener('click', () => this._setLeaderboardTab('weekly'));
+    return () => this._leaderboardTabListeners.delete(listener);
+  }
+
+  _setLeaderboardTab(tab) {
+    this.el.btnLeaderboardTabAlltime.classList.toggle('shop-tab--active', tab === 'alltime');
+    this.el.btnLeaderboardTabDaily.classList.toggle('shop-tab--active', tab === 'daily');
+    this.el.btnLeaderboardTabWeekly.classList.toggle('shop-tab--active', tab === 'weekly');
+    for (const l of this._leaderboardTabListeners || []) l(tab);
+  }
+
+  /** Resets the leaderboard screen's tab back to All-Time (called each time it opens). */
+  resetLeaderboardTab() {
+    this._setLeaderboardTab('alltime');
+  }
 
   /** Shows a status line (loading / error / empty state) instead of the score list. */
   showLeaderboardStatus(message) {

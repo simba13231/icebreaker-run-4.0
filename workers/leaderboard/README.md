@@ -64,6 +64,12 @@ wrangler d1 execute icebreaker-leaderboard --remote --file=./migrations/0004_pla
 wrangler d1 execute icebreaker-leaderboard --remote --file=./migrations/0005_ratelimit_activitylog_pins.sql
 ```
 
+**Daily Challenge and Weekly Tournament leaderboards:**
+
+```
+wrangler d1 execute icebreaker-leaderboard --remote --file=./migrations/0006_daily_and_weekly_leaderboards.sql
+```
+
 **Set the danger secret** (separate from `ADMIN_KEY` — required in addition
 to it for ban/unban/full account removal, so the regular admin key alone
 isn't enough for those three actions):
@@ -144,6 +150,18 @@ keep the key itself private, not the URL.
 
 **Public — codes**
 - `POST /api/codes/redeem` `{ username, code }` → `{ ok, coinsAwarded, itemUnlocked, player }`
+
+**Public — Daily Challenge / Weekly Tournament**
+- `GET /api/daily/scores?date=YYYY-MM-DD&limit=50` → `{ dateKey, scores }` (defaults to today, UTC)
+- `POST /api/daily/scores` `{ username, dateKey, score }` → `{ ok }`
+- `GET /api/weekly/scores?week=YYYY-Www&limit=50` → `{ weekKey, scores }` (defaults to this ISO week, UTC)
+- `POST /api/weekly/scores` `{ username, weekKey, score }` → `{ ok }`
+
+Daily Challenge scores come from the game's seeded Daily Challenge mode
+(same obstacle layout for every player each day — see
+`js/systems/SeededRandom.js` and `Spawner.setRng()`). Weekly Tournament
+scores come from regular Endless-mode runs, which also submit to the
+weekly leaderboard automatically — no separate mode needed for that one.
 
 **Admin — requires header `X-Admin-Key: <ADMIN_KEY>`**
 - `GET /api/admin/players?search=` → `{ players }`

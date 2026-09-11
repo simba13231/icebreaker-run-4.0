@@ -387,6 +387,12 @@
   color: var(--color-ocean-deep);
 }
 
+.mode-card--wide {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  padding: 22px;
+}
+
 /* --- Level select grid --- */
 
 .level-grid {
@@ -908,6 +914,12 @@
   background: linear-gradient(180deg, var(--color-water-1), var(--color-ocean-mid));
   color: #ffffff;
   box-shadow: 0 3px 0 rgba(6, 60, 100, 0.4);
+}
+
+.leaderboard-tabs .shop-tab {
+  flex: 1 1 0;
+  font-size: 0.72rem;
+  padding: 8px 4px;
 }
 
 .boat-card-desc {
