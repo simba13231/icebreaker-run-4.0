@@ -42,19 +42,32 @@ export class RaceManager {
 
     const count = CONFIG.RACE.BOT_COUNT;
     const names = [...CONFIG.RACE.BOT_NAMES].sort(() => Math.random() - 0.5).slice(0, count);
+
+    // Spread starting lanes more naturally than a fixed i % laneCount
+    // pattern: cycle through a shuffled lane order, only repeating a lane
+    // once every lane has been used at least once.
+    const laneCycle = [];
+    while (laneCycle.length < count) {
+      const shuffledLanes = [...Array(lanePositions.length).keys()].sort(() => Math.random() - 0.5);
+      laneCycle.push(...shuffledLanes);
+    }
+
     for (let i = 0; i < count; i++) {
       const speedMultiplier =
         1 +
         CONFIG.RACE.BOT_BASE_SPEED_BONUS +
         randRange(-CONFIG.RACE.BOT_SPEED_VARIANCE, CONFIG.RACE.BOT_SPEED_VARIANCE);
-      const startLane = i % lanePositions.length;
+      const dodgeChance = randRange(CONFIG.RACE.BOT_DODGE_CHANCE_MIN, CONFIG.RACE.BOT_DODGE_CHANCE_MAX);
+      const rubberBandMultiplier = 1 + randRange(-CONFIG.RACE.BOT_RUBBER_BAND_VARIANCE, CONFIG.RACE.BOT_RUBBER_BAND_VARIANCE);
       const bot = new Bot(
         i + 1,
         names[i] || `Rival ${i + 1}`,
         lanePositions,
-        startLane,
+        laneCycle[i],
         speedMultiplier,
-        BOT_PALETTE[i % BOT_PALETTE.length]
+        BOT_PALETTE[i % BOT_PALETTE.length],
+        dodgeChance,
+        rubberBandMultiplier
       );
       this.bots.push(bot);
     }
@@ -68,13 +81,9 @@ export class RaceManager {
   notifyNewRow(blockedLanes) {
     for (const bot of this.bots) {
       if (bot.finished) continue;
-      // Bots don't react instantly/perfectly — small chance they just eat the
-      // hit, so the AI feels alive rather than robotic-perfect.
-      if (Math.random() < 0.82) bot.tryDodge(blockedLanes);
-      // Still in a blocked lane after the dodge attempt = hit an obstacle.
-      if (blockedLanes.has(bot.laneIndex)) {
-        bot.applyHitSlowdown(CONFIG.RACE.BOT_HIT_SLOWDOWN_MS, CONFIG.RACE.BOT_HIT_SLOWDOWN_FACTOR);
-      }
+      // Queue the dodge decision with a small randomized reaction delay
+      // instead of resolving it instantly — see Bot.update()/queueDodgeCheck.
+      bot.queueDodgeCheck(blockedLanes, randRange(0, CONFIG.RACE.BOT_REACTION_DELAY_MAX_MS));
     }
   }
 
@@ -86,7 +95,7 @@ export class RaceManager {
 
       const diff = bot.progress - playerProgress;
       const normalizedDiff = Math.max(-0.3, Math.min(0.3, diff / CONFIG.RACE.DISTANCE_PX));
-      const rubberBand = 1 - normalizedDiff * CONFIG.RACE.BOT_RUBBER_BAND_STRENGTH;
+      const rubberBand = 1 - normalizedDiff * CONFIG.RACE.BOT_RUBBER_BAND_STRENGTH * bot.rubberBandMultiplier;
       const effectiveMultiplier = bot.speedMultiplier * rubberBand * bot.slowFactor;
       const progressDelta = playerSpeed * effectiveMultiplier * deltaSec;
 

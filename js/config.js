@@ -107,6 +107,10 @@ export const CONFIG = {
     BOT_BASE_SPEED_BONUS: 0.1, // bots are 10% faster than the player by default
     BOT_SPEED_VARIANCE: 0.16,
     BOT_RUBBER_BAND_STRENGTH: 0.18,
+    BOT_RUBBER_BAND_VARIANCE: 0.05, // per-bot spread so they don't all cluster identically
+    BOT_DODGE_CHANCE_MIN: 0.68, // per-bot "skill" — some rivals are just better at dodging than others
+    BOT_DODGE_CHANCE_MAX: 0.94,
+    BOT_REACTION_DELAY_MAX_MS: 220, // staggers dodge timing so bots don't all react in perfect unison
     BOT_HIT_SLOWDOWN_MS: 700, // how long a bot is slowed after failing to dodge a hazard
     BOT_HIT_SLOWDOWN_FACTOR: 0.4, // speed multiplier while slowed
     COUNTDOWN_SECONDS: 3,

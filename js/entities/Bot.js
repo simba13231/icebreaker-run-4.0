@@ -11,7 +11,7 @@
 import { CONFIG } from '../config.js';
 
 export class Bot {
-  constructor(id, name, lanePositions, startLane, speedMultiplier, colors) {
+  constructor(id, name, lanePositions, startLane, speedMultiplier, colors, dodgeChance = 0.82, rubberBandMultiplier = 1) {
     this.id = id;
     this.name = name;
     this.lanePositions = lanePositions;
@@ -24,11 +24,21 @@ export class Bot {
 
     this.progress = 0; // px along the race distance
     this.speedMultiplier = speedMultiplier;
+    // Per-bot "personality" — some rivals are just more reliable dodgers
+    // than others, and cluster slightly differently around the player
+    // (rubber-band), so the pack doesn't move as one uniform block.
+    this.dodgeChance = dodgeChance;
+    this.rubberBandMultiplier = rubberBandMultiplier;
     this.finished = false;
     this.finishOrder = null;
     this._dodgeCooldownMs = 0;
     this._slowMsRemaining = 0;
     this._slowFactor = 1;
+
+    // A dodge decision doesn't resolve the instant a row spawns — it's
+    // queued with a small per-reaction delay (see queueDodgeCheck) so bots
+    // don't all flinch in perfect unison, which reads as robotic.
+    this._pendingDodgeCheck = null;
 
     // Visual-only collision feedback (does not affect speed/logic).
     this._shakeMsRemaining = 0;
@@ -39,6 +49,15 @@ export class Bot {
   setLanePositions(lanePositions) {
     this.lanePositions = lanePositions;
     this.targetX = lanePositions[this.laneIndex];
+  }
+
+  /**
+   * Queues a dodge decision to resolve after a short, randomized reaction
+   * delay instead of instantly — called once per newly-spawned hazard row.
+   */
+  queueDodgeCheck(blockedLanes, delayMs) {
+    if (this.finished) return;
+    this._pendingDodgeCheck = { blockedLanes, msRemaining: delayMs };
   }
 
   /** Attempts to steer into an adjacent open lane to avoid a blocked one. */
@@ -96,6 +115,19 @@ export class Bot {
     if (this._dodgeCooldownMs > 0) this._dodgeCooldownMs = Math.max(0, this._dodgeCooldownMs - deltaMs);
     if (this._slowMsRemaining > 0) this._slowMsRemaining = Math.max(0, this._slowMsRemaining - deltaMs);
     if (this._shakeMsRemaining > 0) this._shakeMsRemaining = Math.max(0, this._shakeMsRemaining - deltaMs);
+
+    if (this._pendingDodgeCheck) {
+      this._pendingDodgeCheck.msRemaining -= deltaMs;
+      if (this._pendingDodgeCheck.msRemaining <= 0) {
+        const { blockedLanes } = this._pendingDodgeCheck;
+        this._pendingDodgeCheck = null;
+        if (Math.random() < this.dodgeChance) this.tryDodge(blockedLanes);
+        // Still in a blocked lane after the dodge attempt = hit an obstacle.
+        if (blockedLanes.has(this.laneIndex)) {
+          this.applyHitSlowdown(CONFIG.RACE.BOT_HIT_SLOWDOWN_MS, CONFIG.RACE.BOT_HIT_SLOWDOWN_FACTOR);
+        }
+      }
+    }
 
     if (this._moveElapsed < this._moveDuration) {
       this._moveElapsed = Math.min(this._moveElapsed + deltaMs, this._moveDuration);
