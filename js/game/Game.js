@@ -160,6 +160,7 @@ export class Game {
 
     // Menu -> mode select -> (endless | levels | survival | race) -> gameplay
     this.ui.el.btnPlay.addEventListener('click', () => this._openModeSelect());
+    this.ui.el.btnPlayMenu.addEventListener('click', () => this._openModeSelect());
     this.ui.el.btnModeSelectBack.addEventListener('click', () => this._backToMenu());
     this.ui.el.btnModeEndless.addEventListener('click', () => this._startRun('endless'));
     this.ui.el.btnModeLevels.addEventListener('click', () => this._openLevelSelect());
@@ -171,6 +172,7 @@ export class Game {
 
     // Boat / obstacle shop
     this.ui.el.btnBoatShopOpen.addEventListener('click', () => this._openBoatShop());
+    this.ui.el.btnBoatShopOpenMenu.addEventListener('click', () => this._openBoatShop());
     this.ui.el.btnBoatShopBack.addEventListener('click', () => this._backToMenu());
     this.ui.onBoatAction((action, boatId) => this._handleBoatAction(action, boatId));
     this.ui.onObstacleAction((action, obstacleId) => this._handleObstacleAction(action, obstacleId));
@@ -180,6 +182,7 @@ export class Game {
     // Username entry (first launch) + global leaderboard
     this.ui.onUsernameSubmit((rawValue, rawPin) => this._handleUsernameSubmit(rawValue, rawPin));
     this.ui.el.btnLeaderboardOpen.addEventListener('click', () => this._openLeaderboard());
+    this.ui.el.btnLeaderboardOpenMenu.addEventListener('click', () => this._openLeaderboard());
     this.ui.el.btnLeaderboardBack.addEventListener('click', () => this._backToMenu());
     this.ui.onLeaderboardTabChange((tab) => this._loadLeaderboardTab(tab));
     this.ui.el.btnRedeemOpen.addEventListener('click', () => this._openRedeem());

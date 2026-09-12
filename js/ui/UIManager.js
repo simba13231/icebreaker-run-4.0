@@ -96,7 +96,9 @@ export class UIManager {
       btnRaceResultsMenu: document.getElementById('btn-race-results-menu'),
 
       btnPlay: document.getElementById('btn-play'),
+      btnPlayMenu: document.getElementById('btn-play-menu'),
       btnBoatShopOpen: document.getElementById('btn-boat-shop-open'),
+      btnBoatShopOpenMenu: document.getElementById('btn-boat-shop-open-menu'),
       btnBoatShopBack: document.getElementById('btn-boat-shop-back'),
       btnModeSelectBack: document.getElementById('btn-mode-select-back'),
       btnModeEndless: document.getElementById('btn-mode-endless'),
@@ -136,6 +138,7 @@ export class UIManager {
       btnUsernameSubmit: document.getElementById('btn-username-submit'),
 
       btnLeaderboardOpen: document.getElementById('btn-leaderboard-open'),
+      btnLeaderboardOpenMenu: document.getElementById('btn-leaderboard-open-menu'),
       btnLeaderboardBack: document.getElementById('btn-leaderboard-back'),
       leaderboardList: document.getElementById('leaderboard-list'),
       leaderboardStatus: document.getElementById('leaderboard-status'),
