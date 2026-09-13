@@ -28,13 +28,20 @@
 <link rel="stylesheet" href="css/ui.css" />
 <link rel="stylesheet" href="css/responsive.css" />
 <style>
-  /* CSS for the Advertica Banner Placements (160x600) */
+  /* CSS for the Advertica Banner Placements */
   .menu-ad-banner {
     position: absolute;
     z-index: 10;
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+  .menu-ad-banner--top {
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 728px;
+    height: 90px;
   }
   .menu-ad-banner--left {
     left: 20px;
@@ -51,9 +58,10 @@
     height: 600px;
   }
   @media (max-width: 1100px) {
+    .menu-ad-banner--top,
     .menu-ad-banner--left,
     .menu-ad-banner--right {
-      display: none; /* Hide side banners on smaller screens to avoid overlapping game */
+      display: none; /* Hide banners on smaller screens to avoid overlapping game */
     }
   }
 </style>
@@ -100,6 +108,11 @@
   <!-- Main Menu -->
   <section id="screen-menu" class="screen visible" aria-label="Main menu">
     
+    <!-- Ad Banner Top (Advertica 728x90) -->
+    <div id="ad-banner-top" class="menu-ad-banner menu-ad-banner--top">
+      <ins style="width: 728px;height:90px" data-width="728" data-height="90" class="da82635cb9f" data-domain="//data527.click" data-affquery="/84db043ffe2eec89d257/a82635cb9f/?placementName=2default"><script src="//data527.click/js/responsive.js" async></script></ins>
+    </div>
+
     <!-- Ad Banner Left (Advertica 160x600) -->
     <div id="ad-banner-left" class="menu-ad-banner menu-ad-banner--left">
       <ins style="width: 160px;height:600px" data-width="160" data-height="600" class="a98a7c15d4d" data-domain="//data527.click" data-affquery="/ac926dfd7041a0fa7026/98a7c15d4d/?placementName=1default"><script src="//data527.click/js/responsive.js" async></script></ins>
@@ -107,7 +120,7 @@
 
     <!-- Ad Banner Right (Advertica 160x600) -->
     <div id="ad-banner-right" class="menu-ad-banner menu-ad-banner--right">
-      <ins style="width: 160px;height:600px" data-width="160" data-height="600" class="a98a7c15d4d" data-domain="//data527.click" data-affquery="/ac926dfd7041a0fa7026/98a7c15d4d/?placementName=1default"><script src="//data527.click/js/responsive.js" async></script></ins>
+      <ins style="width: 160px;height:600px" data-width="160" data-height="600" class="k4ddc913b0e" data-domain="//data527.click" data-affquery="/ac926dfd7041a0fa7026/4ddc913b0e/?placementName=2default"><script src="//data527.click/js/responsive.js" async></script></ins>
     </div>
 
     <div class="panel panel--menu">
