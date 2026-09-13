@@ -56,6 +56,15 @@
   padding-top: 44px;
 }
 
+.menu-ad-slot {
+  width: 100%;
+  max-width: 320px;
+  margin: 4px auto 0;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
 .menu-bottom-bar {
   position: absolute;
   left: 0;

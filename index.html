@@ -16,6 +16,10 @@
      data-adbreak-test="on" = TEST MODE: shows mock ads, no real requests sent.
      Remove that attribute once you're approved for H5 Games Ads and want live ads. -->
 <script async data-adbreak-test="on" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8361977653483407" crossorigin="anonymous"></script>
+<!-- Adsterra banner — menu screen only, never shown during gameplay. The
+     container div below lives inside #screen-menu, so it's only visible
+     when that screen is (see .screen/.screen.visible in css/ui.css). -->
+<script async="async" data-cfasync="false" src="https://pl31315400.profitableratecpmnetwork.com/e2b8205e4627cd871d4dd1dca21ff999/invoke.js"></script>
 <script>
   window.adsbygoogle = window.adsbygoogle || [];
   var adBreak = adConfig = function (o) { adsbygoogle.push(o); };
@@ -80,6 +84,9 @@
       <button id="btn-play-menu" class="btn btn--primary btn--pulse">▶ PLAY</button>
       <button id="btn-boat-shop-open-menu" class="btn btn--secondary">🚤 SHOP</button>
       <button id="btn-leaderboard-open-menu" class="btn btn--secondary">🏆 LEADERBOARD</button>
+      <div class="menu-ad-slot">
+        <div id="container-e2b8205e4627cd871d4dd1dca21ff999"></div>
+      </div>
     </div>
     <div class="menu-bottom-bar">
       <div class="menu-bottom-bar-tray">
