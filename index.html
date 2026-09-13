@@ -11,8 +11,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
 <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<!-- AdSense Script -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8361977653483407" crossorigin="anonymous"></script>
+<!-- AdSense / H5 Games Ads — required on this page for adBreak() to work here,
+     separate from the site-verification snippet on your root domain.
+     data-adbreak-test="on" = TEST MODE: shows mock ads, no real requests sent.
+     Remove that attribute once you're approved for H5 Games Ads and want live ads. -->
+<script async data-adbreak-test="on" src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8361977653483407" crossorigin="anonymous"></script>
 <script>
   window.adsbygoogle = window.adsbygoogle || [];
   var adBreak = adConfig = function (o) { adsbygoogle.push(o); };
@@ -25,29 +28,27 @@
 <link rel="stylesheet" href="css/ui.css" />
 <link rel="stylesheet" href="css/responsive.css" />
 <style>
-  /* Added CSS for the new ad banner placements */
+  /* CSS for the Advertica Banner Placements (160x600) */
   .menu-ad-banner {
     position: absolute;
     z-index: 10;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
   }
   .menu-ad-banner--left {
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
-    width: 300px;
-    min-height: 250px;
+    width: 160px;
+    height: 600px;
   }
   .menu-ad-banner--right {
     right: 20px;
     top: 50%;
     transform: translateY(-50%);
-    width: 300px;
-    min-height: 250px;
+    width: 160px;
+    height: 600px;
   }
   @media (max-width: 1100px) {
     .menu-ad-banner--left,
@@ -99,24 +100,14 @@
   <!-- Main Menu -->
   <section id="screen-menu" class="screen visible" aria-label="Main menu">
     
-    <!-- Ad Banner Left -->
+    <!-- Ad Banner Left (Advertica 160x600) -->
     <div id="ad-banner-left" class="menu-ad-banner menu-ad-banner--left">
-      <!-- Paste your Left AdSense code here -->
-      <ins class="adsbygoogle"
-           style="display:inline-block;width:300px;height:250px"
-           data-ad-client="ca-pub-8361977653483407"
-           data-ad-slot="YOUR_LEFT_AD_SLOT_ID_HERE"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      <ins style="width: 160px;height:600px" data-width="160" data-height="600" class="a98a7c15d4d" data-domain="//data527.click" data-affquery="/ac926dfd7041a0fa7026/98a7c15d4d/?placementName=1default"><script src="//data527.click/js/responsive.js" async></script></ins>
     </div>
 
-    <!-- Ad Banner Right -->
+    <!-- Ad Banner Right (Advertica 160x600) -->
     <div id="ad-banner-right" class="menu-ad-banner menu-ad-banner--right">
-      <!-- Paste your Right AdSense code here -->
-      <ins class="adsbygoogle"
-           style="display:inline-block;width:300px;height:250px"
-           data-ad-client="ca-pub-8361977653483407"
-           data-ad-slot="YOUR_RIGHT_AD_SLOT_ID_HERE"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      <ins style="width: 160px;height:600px" data-width="160" data-height="600" class="a98a7c15d4d" data-domain="//data527.click" data-affquery="/ac926dfd7041a0fa7026/98a7c15d4d/?placementName=1default"><script src="//data527.click/js/responsive.js" async></script></ins>
     </div>
 
     <div class="panel panel--menu">
